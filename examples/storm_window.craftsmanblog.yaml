@@ -1,0 +1,52 @@
+# Storm window cut list: 2 small windows + 1 large window
+
+kerf: "1/8"
+
+stock:
+  - id: board-a
+    width: "4 3/4"
+    length: "97 1/2"
+    quantity: 1
+  - id: board-b
+    width: "4 7/8"
+    length: "97 1/2"
+    quantity: 1
+  - id: board-c
+    width: "5 1/2"
+    length: "97 1/2"
+    quantity: 1
+
+cuts:
+  # Shared across all 3 windows (2 + 2 + 2)
+  - name: Stiles
+    length: "62 1/4"
+    width: "1 11/16"
+    quantity: 6
+
+  # Small windows (17 1/4" rails) × 2
+  - name: Top Rail
+    length: "17 1/4"
+    width: "1 11/16"
+    quantity: 2
+  - name: Meeting rail
+    length: "17 1/4"
+    width: "1 1/4"
+    quantity: 2
+  - name: Bottom rail
+    length: "17 1/4"
+    width: "2 9/16"
+    quantity: 2
+
+  # Large window (38 1/4" rails) × 1
+  - name: Top Rail
+    length: "38 1/4"
+    width: "1 11/16"
+    quantity: 1
+  - name: Meeting rail
+    length: "38 1/4"
+    width: "1 1/4"
+    quantity: 1
+  - name: Bottom rail
+    length: "38 1/4"
+    width: "2 9/16"
+    quantity: 1

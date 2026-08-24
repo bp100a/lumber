@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="868.0" height="140.0" viewBox="0 0 868.0 140.0" role="img" aria-label="Cut diagram for board-d">
+<defs>
+<pattern id="waste-board-d" width="6" height="6" patternUnits="userSpaceOnUse">
+<rect width="6" height="6" fill="#f4f4f4"/>
+<path d="M0 6 L6 0" stroke="#d0d0d0" stroke-width="1"/>
+</pattern>
+</defs>
+<rect x="52.0" y="24.0" width="800.0" height="80.0" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+<rect x="52.00" y="24.00" width="415.00" height="27.59" fill="#c5e8e0" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="living-west Stiles #2" data-length-offset="0" data-rip-offset="0" data-length="62 1/4" data-width="2 1/2"><title>living-west Stiles #2 — 62 1/4" × 2 1/2"</title></rect>
+<text x="56.00" y="36.00" font-family="sans-serif" font-size="10" fill="#222222">living-west Stiles #2</text>
+<rect x="467.00" y="24.00" width="0.83" height="27.59" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="467.83" y="24.00" width="244.17" height="27.59" fill="#c5e8e0" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="dining-middle Top Rail #1" data-length-offset="62 3/8" data-rip-offset="0" data-length="36 5/8" data-width="2 1/2"><title>dining-middle Top Rail #1 — 36 5/8" × 2 1/2"</title></rect>
+<text x="471.83" y="36.00" font-family="sans-serif" font-size="10" fill="#222222">dining-middle Top Rail #1</text>
+<rect x="712.00" y="24.00" width="0.83" height="27.59" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="712.83" y="24.00" width="104.17" height="27.59" fill="#e8d4c5" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="dining-west Top Rail #1" data-length-offset="99 1/8" data-rip-offset="0" data-length="15 5/8" data-width="2 1/2"><title>dining-west Top Rail #1 — 15 5/8" × 2 1/2"</title></rect>
+<text x="716.83" y="36.00" font-family="sans-serif" font-size="10" fill="#222222">dining-west Top Rail #1</text>
+<rect x="817.00" y="24.00" width="35.00" height="27.59" fill="url(#waste-board-d)" stroke="#cccccc" stroke-width="0.5" data-kind="waste"/>
+<rect x="52.00" y="51.59" width="800.00" height="1.38" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="52.00" y="52.97" width="415.00" height="27.59" fill="#e8c5d4" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="living-middle Stiles #1" data-length-offset="0" data-rip-offset="2 5/8" data-length="62 1/4" data-width="2 1/2"><title>living-middle Stiles #1 — 62 1/4" × 2 1/2"</title></rect>
+<text x="56.00" y="64.97" font-family="sans-serif" font-size="10" fill="#222222">living-middle Stiles #1</text>
+<rect x="467.00" y="52.97" width="0.83" height="27.59" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="467.83" y="52.97" width="104.17" height="27.59" fill="#d4e8c5" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="dining-east Top Rail #1" data-length-offset="62 3/8" data-rip-offset="2 5/8" data-length="15 5/8" data-width="2 1/2"><title>dining-east Top Rail #1 — 15 5/8" × 2 1/2"</title></rect>
+<text x="471.83" y="64.97" font-family="sans-serif" font-size="10" fill="#222222">dining-east Top Rail #1</text>
+<rect x="572.00" y="52.97" width="280.00" height="27.59" fill="url(#waste-board-d)" stroke="#cccccc" stroke-width="0.5" data-kind="waste"/>
+<rect x="52.00" y="80.55" width="800.00" height="1.38" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="52.00" y="81.93" width="105.00" height="13.79" fill="#d4e8c5" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="living-west Meeting rail #1" data-length-offset="0" data-rip-offset="5 1/4" data-length="15 3/4" data-width="1 1/4"><title>living-west Meeting rail #1 — 15 3/4" × 1 1/4"</title></rect>
+<text x="55.00" y="93.72" font-family="sans-serif" font-size="8" fill="#222222">living-west Meeting rail #1</text>
+<rect x="157.00" y="81.93" width="0.83" height="13.79" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="157.83" y="81.93" width="105.00" height="13.79" fill="#c5d4e8" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="living-east Meeting rail #1" data-length-offset="15 7/8" data-rip-offset="5 1/4" data-length="15 3/4" data-width="1 1/4"><title>living-east Meeting rail #1 — 15 3/4" × 1 1/4"</title></rect>
+<text x="160.83" y="93.72" font-family="sans-serif" font-size="8" fill="#222222">living-east Meeting rail #1</text>
+<rect x="262.83" y="81.93" width="0.83" height="13.79" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="263.67" y="81.93" width="104.17" height="13.79" fill="#c5e8e0" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="dining-west Meeting rail #1" data-length-offset="31 3/4" data-rip-offset="5 1/4" data-length="15 5/8" data-width="1 1/4"><title>dining-west Meeting rail #1 — 15 5/8" × 1 1/4"</title></rect>
+<text x="266.67" y="93.72" font-family="sans-serif" font-size="8" fill="#222222">dining-west Meeting rail #1</text>
+<rect x="367.83" y="81.93" width="0.83" height="13.79" fill="#8a8a8a" data-kind="kerf"/>
+<rect x="368.67" y="81.93" width="104.17" height="13.79" fill="#e8e4c5" stroke="#333333" stroke-width="0.75" data-kind="piece" data-label="dining-east Meeting rail #1" data-length-offset="47 1/2" data-rip-offset="5 1/4" data-length="15 5/8" data-width="1 1/4"><title>dining-east Meeting rail #1 — 15 5/8" × 1 1/4"</title></rect>
+<text x="371.67" y="93.72" font-family="sans-serif" font-size="8" fill="#222222">dining-east Meeting rail #1</text>
+<rect x="472.83" y="81.93" width="379.17" height="13.79" fill="url(#waste-board-d)" stroke="#cccccc" stroke-width="0.5" data-kind="waste"/>
+<rect x="52.00" y="95.72" width="800.00" height="8.28" fill="url(#waste-board-d)" stroke="#cccccc" stroke-width="0.5" data-kind="waste"/>
+<rect x="52.0" y="24.0" width="800.0" height="80.0" fill="none" stroke="#333333" stroke-width="1.5"/>
+<text x="52.0" y="126.0" font-family="sans-serif" font-size="11" fill="#333333">0"  ← length →  120"</text>
+<text x="8" y="64.0" font-family="sans-serif" font-size="11" fill="#333333" transform="rotate(-90 8 64.0)">0"  ← width →  7 1/4"</text>
+<text x="52.0" y="134.0" font-family="sans-serif" font-size="9" fill="#666666">Width exaggerated for readability</text>
+</svg>

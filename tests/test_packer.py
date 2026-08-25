@@ -154,16 +154,23 @@ def test_shorter_boards_take_stiles_that_cannot_pair_on_longest() -> None:
     _assert_no_overlap(plan)
 
 
-def test_station_plan_twelve_foot_remnant() -> None:
+def test_station_plan_twelve_foot_and_ten_foot_remnants() -> None:
     from lumber.layout import station_plan
 
-    plan = station_plan(Fraction(144), Fraction(249, 4), Fraction(1, 8))
-    assert plan is not None
-    assert plan.count == 2
-    assert plan.remnant_start == Fraction(499, 4)  # 124 3/4
-    assert plan.remnant_length == Fraction(77, 4)  # 19 1/4
-    assert station_plan(Fraction(120), Fraction(249, 4), Fraction(1, 8)) is None
+    twelve = station_plan(Fraction(144), Fraction(249, 4), Fraction(1, 8))
+    assert twelve is not None
+    assert twelve.count == 2
+    assert twelve.remnant_start == Fraction(499, 4)  # 124 3/4
+    assert twelve.remnant_length == Fraction(77, 4)  # 19 1/4
+
+    ten = station_plan(Fraction(120), Fraction(249, 4), Fraction(1, 8))
+    assert ten is not None
+    assert ten.count == 1
+    assert ten.remnant_start == Fraction(499, 8)  # 62 3/8
+    assert ten.remnant_length == Fraction(461, 8)  # 57 5/8
+
     assert station_plan(Fraction(195, 2), Fraction(249, 4), Fraction(1, 8)) is None
+    assert station_plan(Fraction(97), Fraction(249, 4), Fraction(1, 8)) is None
 
 
 def test_waste_percent_ignores_unused_boards() -> None:

@@ -228,6 +228,10 @@ def _mark_consumed(boards: list[_BoardState], stock_ids: set[str]) -> None:
             board.used_width = board.stock.width
 
 
+def _blanks_for(boards: list[_BoardState], stock_ids: set[str]) -> list[_BoardState]:
+    return [board for board in boards if board.stock.id in stock_ids]
+
+
 def _place_station_pack(
     pieces: list[CutPiece],
     boards: list[_BoardState],
@@ -249,16 +253,24 @@ def _place_station_pack(
     strips = _strips_for_pieces(long_parts, plan.station, kerf)
     placed, unplaced_long = _place_strips(strips, stations, kerf, lengths=None)
     placements.extend(placed)
+    used_ids = {p.stock_id for p in placements}
 
     overflow_short = short_parts
-    if remnants:
+    remnant_targets = _blanks_for(remnants, used_ids) if used_ids else []
+    if remnant_targets:
         strips = _strips_for_pieces(overflow_short, plan.remnant_length, kerf)
-        placed, overflow_short = _place_strips(strips, remnants, kerf, lengths=None)
+        placed, overflow_short = _place_strips(
+            strips, remnant_targets, kerf, lengths=None
+        )
         placements.extend(placed)
+        used_ids.update(p.stock_id for p in placed)
 
-    if overflow_short:
+    station_targets = _blanks_for(stations, used_ids) if used_ids else stations
+    if overflow_short and station_targets:
         strips = _strips_for_pieces(overflow_short, plan.station, kerf)
-        placed, overflow_short = _place_strips(strips, stations, kerf, lengths=None)
+        placed, overflow_short = _place_strips(
+            strips, station_targets, kerf, lengths=None
+        )
         placements.extend(placed)
 
     _mark_consumed(boards, {p.stock_id for p in placements})
@@ -272,15 +284,16 @@ def optimize(problem: Problem) -> CutPlan:
     can share a 12' strip without blocking 10' boards that can only take one
     stile per strip.
 
-    On a length class that fits two or more long stations, short parts go in
-    the remnant blank so a through cross-cut shortens the rips. Those boards
-    get a stored through-cut layout.
+    On a length class that fits one or more long stations, short parts go in
+    the remnant blank so a through cross-cut shortens the rips. A 10' board
+    with 62 1/4" stiles is one station plus leftover, not a 10' rip. Those
+    boards get a stored through-cut layout.
     """
     stock = expand_stock(problem.stock)
     pending = expand_cuts(problem.cuts)
     kerf = problem.kerf
 
-    plan = CutPlan(kerf=kerf, stock=stock)
+    plan = CutPlan(kerf=kerf, stock=stock, windows=list(problem.windows))
     if not stock:
         plan.unplaced = pending
         return plan

@@ -57,3 +57,23 @@ def test_write_pdf_reports_windows_completed_from_stock(tmp_path: Path) -> None:
     assert b"Windows completed: 6 of 6" in data
     assert b"board-c" in data
     assert b"Unused stock:" in data
+    assert b"Cuts by window" in data
+    assert b"dining-west" in data
+    assert b"Height" in data
+    assert b"Width" in data
+    assert b"Stiles" in data
+    assert b"Meeting rail" in data
+    assert b'62 1/2"' in data
+    assert b'20 7/8"' in data
+    assert b'62 1/4"' in data
+    assert b'16 3/8"' in data
+    assert b'2 1/8"' in data
+
+
+def test_write_pdf_omits_window_tables_for_handwritten_cuts(tmp_path: Path) -> None:
+    plan = optimize(load_problem(CRAFTSMANBLOG))
+    out = tmp_path / "handwritten.pdf"
+    write_pdf(plan, out)
+    data = out.read_bytes()
+    assert b"Cuts by window" not in data
+    assert b"Height" not in data

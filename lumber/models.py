@@ -76,6 +76,7 @@ class CutPlan:
     kerf: Fraction = Fraction(1, 8)
     stock: list[StockPiece] = field(default_factory=list)
     board_layouts: dict[str, BoardLayout] = field(default_factory=dict)
+    windows: list[WindowOpening] = field(default_factory=list)
 
     @property
     def placed_area(self) -> Fraction:
@@ -109,8 +110,17 @@ class CutPlan:
         return float(self.waste_area / basis * 100)
 
 
+@dataclass(frozen=True)
+class WindowOpening:
+    id: str
+    height: Fraction
+    width: Fraction
+    meeting: Fraction | None = None
+
+
 @dataclass
 class Problem:
     stock: list[StockPiece]
     cuts: list[CutPiece]
     kerf: Fraction = Fraction(1, 8)
+    windows: list[WindowOpening] = field(default_factory=list)

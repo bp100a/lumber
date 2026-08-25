@@ -10,7 +10,7 @@ import yaml
 
 from lumber.dimensions import parse_inches
 from lumber.models import CutPiece, Problem, StockPiece
-from lumber.windows import cuts_from_problem_data
+from lumber.windows import cuts_from_problem_data, parse_windows
 
 
 def _load_raw(path: Path) -> dict[str, Any]:
@@ -65,6 +65,8 @@ def load_problem(path: str | Path) -> Problem:
         raise ValueError("problem file has both 'windows' and 'cuts'; provide only one")
     if has_windows:
         cuts = cuts_from_problem_data(data)
+        windows = parse_windows(data.get("windows") or [])
     else:
         cuts = _parse_cuts(data.get("cuts") or [])
-    return Problem(stock=stock, cuts=cuts, kerf=kerf)
+        windows = []
+    return Problem(stock=stock, cuts=cuts, kerf=kerf, windows=windows)

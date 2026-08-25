@@ -2,7 +2,7 @@
 
 A Python tool that takes **stock lumber** and either a handwritten **cut list** or **window openings**, then outputs **which cuts to take from which board**.
 
-This plan incorporates every decision from the original design plus later changes (storm windows, kerf, shop PDF, cross-cut-first / gang-rip sequence, cuts-from-openings, mixed-length packing, shorter rips on 12' boards).
+This plan incorporates every decision from the original design plus later changes (storm windows, kerf, shop PDF, per-window cut tables, cross-cut-first / gang-rip sequence, cuts-from-openings, mixed-length packing, shorter rips on 12' and 10' boards).
 
 ---
 
@@ -33,9 +33,9 @@ Each stock piece is a rectangle **W × L**. Each cut needs **w × l**. Pieces ar
 | board-g | 4 7/8 | 97 (8' 1") |
 | board-h | 5 1/2 | 97 (8' 1") |
 
-**Openings** (section 16) derive **30 pieces**: 12 stiles @ 62 1/4" × 2 1/2", plus top / meeting / bottom rails per window. Part widths: stile and top rail **2 1/2"**, meeting rail **1 1/4"**, bottom rail **3 1/2"**.
+**Openings** (section 16) derive **30 pieces**: 12 stiles @ 62 1/4" × 2 1/8", plus top / meeting / bottom rails per window. Part widths: stile and top rail **2 1/8"**, meeting rail **1 1/4"**, bottom rail **3 1/2"**.
 
-**Result with the current packer:** all **30 pieces place**; **6 of 6** windows complete. Used: board-a through board-e. Unused leftover: board-f, board-g, board-h.
+**Result with the current packer:** all **30 pieces place**; **6 of 6** windows complete; waste about **30%** on used boards. Used: board-a, board-b, board-d, board-e. Unused leftover: board-c (wide 10'), board-f, board-g, board-h. 10' boards are through-cut (62 1/4" blank + 57 5/8" leftover), not a 10' rip.
 
 ### Historical fixture: three windows on three 8' boards
 
@@ -48,7 +48,7 @@ Each stock piece is a rectangle **W × L**. Each cut needs **w × l**. Pieces ar
 | Decision | Choice | Source |
 |----------|--------|--------|
 | Thickness | All stock and cuts are **1"**; thickness is not an input field | User |
-| Cut workflow | Default: **rip to width**, then **cross-cut to length**. Same-length board → cross-cut first (section 14). Adjacent same-length-only strips → gang-rip (section 15). On **12' boards**, pack small parts into the leftover length so a **through cross-cut** shortens the rip (section 18) | User |
+| Cut workflow | Default: **rip to width**, then **cross-cut to length**. Same-length board → cross-cut first (section 14). Adjacent same-length-only strips → gang-rip (section 15). On **12' and 10' boards**, pack leftover length so a **through cross-cut** shortens the rip (section 18) | User |
 | Grain rotation | **Not allowed** | Original plan default |
 | Kerf | First-class input, default **1/8"**, overridable in the file and via `--kerf` | User question + original plan |
 | Project type | **Storm windows** (stiles, top rail, meeting rail, bottom rail) | User correction (not door frames) |
@@ -60,7 +60,8 @@ Each stock piece is a rectangle **W × L**. Each cut needs **w × l**. Pieces ar
 | Inch math | `fractions.Fraction` (exact `4 3/4`, `1 11/16`) | Original plan |
 | Optimizer | Two-stage greedy: pack strips **per stock length** (longest first), then widest-strip / tightest-width onto boards of that length (section 17) | User + mixed 12'/10'/8' stock |
 | Objective | Maximize pieces placed, then tightest width fit (widest strips first) | Needed so wide rails claim width before stiles |
-| Shop report | **PDF** with instructions, per-board diagrams, **windows completed**, and **unused stock** | User |
+| 12' / 10' rips | Through-cut station blanks so rips are 62 1/4" (12': two stations + 19 1/4" leftover; 10': one station + 57 5/8" leftover). 8' stock stays rip-first / cross-cut-first / gang-rip | User |
+| Shop report | **PDF** with instructions, per-board diagrams, **windows completed**, **unused stock**, and a **per-window cut table** (opening H×W plus each part’s L×W×qty; mixed numbers with `"` in one cell) | User |
 
 ---
 
@@ -164,7 +165,7 @@ Under rip-then-crosscut with **per-length** strip packing:
 - The same pair does **not** share a **10'** strip (`124 3/4" > 120"`), so leftover stiles go one-per-strip on 10' boards (section 17).
 - Bottom rails (3 1/2") take a 12' strip on board-b; stiles and top rails fill remaining 12' and 10' width.
 
-**Result: 30 of 30 pieces place; 6 of 6 windows complete.** board-f, board-g, and board-h are unused leftover.
+**Result: 30 of 30 pieces place; 6 of 6 windows complete; ~30% waste on used boards.** Unused leftover: board-c, board-f, board-g, board-h. 10' boards through-cut (section 18), not full-length rips.
 
 ### Historical three-window list (three 8' boards)
 
@@ -275,7 +276,7 @@ UNPLACED:
 
 JSON includes placements, unplaced pieces, `placed` count, waste, and when openings were used: `windows_completed` / `windows_total` / complete and incomplete ids, plus `unused_stock`.
 
-Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-facing deliverable is a PDF** (section 13): one file with instructions, graphics, windows completed, and unused stock.
+Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-facing deliverable is a PDF** (section 13): one file with instructions, graphics, windows completed, unused stock, and a per-window cut table.
 
 ---
 
@@ -307,7 +308,9 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | Same-length leftover is one full-width offcut, not long narrow strips | Done |
 | Derive cut list from window openings (height/width − 1/4", rails between stiles) | Done |
 | PDF/text/markdown report how many windows are complete and which stock is unused | Done |
+| PDF per-window cut table: opening H×W plus part L×W×qty; each measurement one cell with `"` (`62 1/2"`, not `62` \| `1/2`) | Done |
 | 12' boards: through cross-cut so rips are not full length; small parts in the leftover (section 18) | Done |
+| 10' boards: one station + leftover (no 10' rip); wide unused 10' stock listed leftover | Done |
 | OR-Tools golden comparison | Deferred with Phase 2 |
 
 ---
@@ -333,6 +336,8 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | 15 | Pack strips per stock length so 10' / 8' boards get leftover stiles (section 17) | Done |
 | 16 | Report windows completed and unused stock on the shop cutsheet | Done |
 | 17 | 12' boards: pack small parts into leftover length; through cross-cut, then shorter rips (section 18) | Done |
+| 18 | PDF per-window cut table (opening size + part list; mixed numbers with `"` in one cell) | Done |
+| 19 | 10' boards: one 62 1/4" station + 57 5/8" leftover (no 10' rip); skip unused wide 10' stock | Done |
 
 ---
 
@@ -348,10 +353,11 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 - Live six-window list places all 30 pieces on boards a–e
 - Can write a `.md` shop report that shows, for each used board, where every cut sits on the face
 - Can write a single **PDF** with those instructions and graphics, suitable to print or open without a Markdown preview
+- PDF lists each window’s opening and derived cuts (length, width, quantity) with mixed numbers and a `"` inch mark in a single cell per measurement
 - When every piece on a board is the same length, shop instructions **cross-cut that length first**, then rip, so leftover is a full-width offcut
 - When adjacent strips hold only same-length parts, **rip them as one blank**, cross-cut, then rip apart, so leftover is a wider offcut
 - From opening height/width, compute stile and rail **lengths** (1/4" expansion; rails between stiles) and feed the packer
-- On 12' boards, **do not rip the full 12'** when leftover length can hold the small parts: through cross-cut first, then rip the shorter blanks (section 18)
+- On 12' and 10' boards, **do not rip the full board** when leftover length can hold the remaining parts: through cross-cut first, then rip the shorter blanks (section 18)
 
 ---
 
@@ -515,8 +521,9 @@ Each placed piece is a labeled rectangle at its `rip_offset` / `length_offset` w
 One file, e.g. `storm_window.pdf`, that contains:
 
 1. Title, kerf, placed count, waste, **windows completed** (when cuts have window ids), **unused stock**
-2. For each used board: a **drawn face diagram** (same geometry as today’s SVG) and the rip / cross-cut list
-3. An **Unplaced** section with `INSUFFICIENT STOCK` when pieces do not fit
+2. **Cuts by window** (when openings were used): one table per window, two-up on the page
+3. For each used board: a **drawn face diagram** (same geometry as today’s SVG) and the rip / cross-cut list
+4. An **Unplaced** section with `INSUFFICIENT STOCK` when pieces do not fit
 
 Open in any PDF viewer, print, or take to the shop. No Markdown preview required.
 
@@ -541,6 +548,14 @@ Windows completed: 6 of 6
 Complete: dining-east, dining-middle, …
 Unused stock: board-f, board-g, board-h
 
+Cuts by window
+  dining-west          dining-middle
+  Height  62 1/2"           Height  62 1/2"
+  Width   20 7/8"           Width   41 7/8"
+  Stiles  62 1/4"  2 1/2"  2
+  Top Rail 15 5/8"  2 1/2"  1
+  …
+
 board-a — 7 3/8" × 1" × 144"
 [ diagram ]
 Cuts
@@ -555,6 +570,27 @@ board-c — 8 3/8" × 1" × 120"
 - One board per page when the diagram + cut list would overflow; otherwise pack multiple boards on a page if they fit
 - Unused boards are listed in the summary, not drawn
 - Diagram rules unchanged from section 12 (labels, kerf gaps, hatched offcut, optional “width exaggerated” note)
+
+### Cuts by window
+
+When the problem was loaded from `windows:` (cuts carry `window_id`), the PDF inserts a **Cuts by window** block after the summary and before the board diagrams. Handwritten `cuts:` files skip this block.
+
+Each window is a small grid:
+
+| Column | Opening rows | Part rows |
+|--------|----------------|-----------|
+| 1 | Height / Width | Stiles, Top Rail, Meeting rail, Bottom rail |
+| 2 | Opening size (`62 1/2"`) | Part **length** (`62 1/4"`) |
+| 3 | — | Part **width** (`2 1/2"`) |
+| 4 | — | **Quantity** |
+
+Do **not** split a mixed number across two cells (`62` | `1/2`). Whole number and fraction share one cell, same as `format_inches`, with a `"` suffix. No separate “inches” column.
+
+Leave a gap between the window-id heading and the first grid row so descenders (`g` in dining, `g` in living) are not clipped by the cell fill.
+
+Dining west (live 2 1/2" stiles) is the worked example: opening 62 1/2 × 20 7/8; stiles 62 1/4 × 2 1/2 × 2; rails 15 5/8 (top 2 1/2, meeting 1 1/4, bottom 3 1/2). Those lengths come from section 16, not from packing.
+
+Openings are stored on `Problem` / `CutPlan` so the table can print original height and width, not only the derived pieces.
 
 ### Library
 
@@ -572,7 +608,7 @@ Do **not** shell out to a browser or require a system PDF printer.
 - Reuse `lumber.diagram.board_regions` for piece / kerf / waste rectangles; map inches to page points with a max diagram width (~7.5" on letter)
 - CLI: `--format pdf`; error if `-o` is missing
 - `uv add reportlab` (runtime dependency, not only dev)
-- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; the live six-window PDF contains `Windows completed: 6 of 6` and unused stock; a tiny fixture PDF contains the expected part labels
+- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; the live six-window PDF contains `Windows completed: 6 of 6`, unused stock, `Cuts by window`, dining-west, and mixed numbers with inch marks such as `62 1/2"` / `15 5/8"`; handwritten-cut PDFs omit the window tables; `window_cut_tables` groups the live six openings in file order
 
 ### Out of scope for this item
 
@@ -754,15 +790,17 @@ windows:
 
 ### Live packing result
 
-With the eight-board stock and per-length packing (section 17): **30 of 30 placed**, **6 of 6 windows complete**. Unused leftover: board-f, board-g, board-h.
+With the eight-board stock, per-length packing (section 17), and 10'/12' through-cuts (section 18): **30 of 30 placed**, **6 of 6 windows complete**, ~30% waste on used boards. Unused leftover: board-c, board-f, board-g, board-h.
 
 Shop reports (text, markdown, PDF) print:
 
 ```
 Windows completed: 6 of 6
 Complete: dining-east, dining-middle, dining-west, living-east, living-middle, living-west
-Unused stock: board-f, board-g, board-h
+Unused stock: board-c, board-f, board-g, board-h
 ```
+
+The **PDF** also prints **Cuts by window** (section 13): opening height/width and the derived part list, mixed numbers with a `"` suffix in one cell. Text and markdown do not.
 
 A window is complete only when every planned piece for that opening is placed (2 stiles + top + meeting + bottom).
 
@@ -822,73 +860,82 @@ Unused stock: board-f, board-g, board-h
 ### Tests
 
 - Four 62 1/4" × 2 1/2" stiles: two on a 2 1/2" × 144" board, two on a 5 1/8" × 120" board; none unplaced
-- Live storm-window optimize uses board-c, board-d, and board-e (not only a, b, f)
-- Three-board craftsmanblog fixture still 14/15 (same-length stock; behavior unchanged)
+- Live storm-window optimize uses board-d and board-e (10' through-cut); board-c stays unused leftover
+- Three-board craftsmanblog fixture still 14/15 (same-length 8' stock; behavior unchanged)
 
 ---
 
-## 18. Shorten 12' rips: small parts in the leftover, then through cross-cut
+## 18. Shorten 12' and 10' rips: leftover length, then through cross-cut
 
-**Status:** implemented. The packer treats a 12' board as two 62 1/4" station blanks plus a **19 1/4" × full-width leftover**. Small parts (`length ≤ 19 1/4"`) go in that leftover; 36"+ rails stay on the station blanks. Shop instructions and the face diagram are through-cut, not a 12' rip.
+**Status:** implemented. The packer treats a long board as one or more 62 1/4" station blanks plus a **full-width leftover**.
+
+| Stock | Stations | Leftover | Shop rips |
+|-------|----------|----------|-----------|
+| 12' (144") | two × 62 1/4" | 19 1/4" | not 12' |
+| 10' (120") | one × 62 1/4" | 57 5/8" | not 10' |
+| 8' (~97") | none (count would be 1 but leftover packing loses the 8' fixture) | — | rip-first / cross-cut-first / gang-rip |
+
+Small parts (`length ≤ leftover`) go in the leftover; longer rails share the station blanks. Shop instructions and the face diagram are through-cut.
 
 ### Problem (before)
 
-`board-a` is 7 3/8" × 144". The old layout hung short rails on the **end of a full-length 12' rip**:
+`board-a` is 7 3/8" × 144". The old layout hung short rails on the **end of a full-length 12' rip**. `board-e` (6 1/8" × 120") was a **10' rip**: a 62 1/4" stile, a 37 1/2" rail, and a 16 1/2" rail on one strip, plus a second strip that used only 16 3/8" of 10'. Waste on used boards was **~45%**, and the wide 10' board-c was almost empty except skinny meeting-rail strips.
 
-```
-Rip 2 1/2" the full 144"
-  62 1/4" stile + 62 1/4" stile + ~15 3/4" top rail + a few inches of skinny waste
-```
+### Geometry
 
-Ripping **12 feet** is awkward and unsafe. Those short rails were occupying the leftover that could have been a separate blank.
-
-Two 62 1/4" stations + kerf between them + kerf after the last station:
+12': two stations + kerf after each:
 
 ```
 62 1/4 + 1/8 + 62 1/4 + 1/8 = 124 3/4"  (leftover starts here)
 144 − 124 3/4 = 19 1/4"
 ```
 
-### Live sequence (board-a)
+10': one station (two 62 1/4" stiles do not fit 120"):
 
 ```
-Board: 7 3/8" x 1" x 144" (board-a)
-  Sequence: through cross-cut (shorten 12' rips)
+62 1/4 + 1/8 = 62 3/8"  (leftover starts here)
+120 − 62 3/8 = 57 5/8"
+```
+
+A 37 1/2" living-middle rail **fits the 10' leftover** and does not need a 10' rip. Remnants are only used on boards that already received a station piece, so leftover 10' stock is not opened just for skinny strips.
+
+### Live sequence (board-e)
+
+```
+Board: 6 1/8" x 1" x 120" (board-e)
+  Sequence: through cross-cut (shorten long rips)
   Cross-cut @ 0" + 62 1/4" -> blank A
-    Rip 2 1/2" -> dining-middle stiles; rip 1 1/4" -> 36 3/4" meeting rail
-  Cross-cut @ 62 3/8" + 62 1/4" -> blank B
-    Rip 2 1/2" -> dining-east stiles; rip 1 1/4" -> 36 5/8" meeting rail
-  Leftover blank: 19 1/4" x 7 3/8"
-    Rip 3 1/2" -> living-east / dining-west bottom rails
+    Rip 2 1/8" -> living-middle stiles
+  Leftover blank: 57 5/8" x 6 1/8"
+    Rip 3 1/2" / 2 1/8" -> remaining rails
 ```
 
-board-b is the same pattern (through-cut, leftover 19 1/4" × 7"). 10' boards stay cross-cut-first or rip-first. The craftsmanblog 8' fixture is unchanged (14/15, gang-rip on board-b).
+board-d is the same 10' pattern. board-c (8 3/8" × 10') stays **unused**. The craftsmanblog 8' fixture is unchanged (14/15, gang-rip on board-b).
 
 ### Rule
 
-On a board that fits **two or more** of the longest piece (12' with 62 1/4" stiles):
+On a board **10' or longer** that fits at least one of the longest piece:
 
-- Pack long pieces onto the station blanks (62 1/4" × full width at 0" and 62 3/8").
-- Pack pieces with `length ≤ leftover` into the leftover blank; leftover width is independent of station used-width.
-- Overflow small pieces onto remaining station width, then the next length class (10').
-- Shop instructions: **through cross-cut**, then rip the shorter blanks. Diagram draws full-width kerf at 62 1/4" and 124 5/8".
-- Parts longer than the leftover (36 5/8" / 36 3/4" rails) never sit in that leftover.
-
-This is **packer + sequence + diagram**, unlike sections 14–15 (sequence only).
+- Pack long pieces onto the station blanks.
+- Pack pieces with `length ≤ leftover` into the leftover blank of boards that already have station parts.
+- Overflow small pieces onto remaining station width of those boards, then the next length class.
+- Shop instructions: **through cross-cut**, then rip the shorter blanks.
+- 8' stock does not use this path (`station_plan` returns None when count == 1 and length < 120").
 
 ### What does not change
 
-- Six windows still complete from current stock (30/30; unused f, g, h)
-- Kerf, expansion, part widths
-- Sections 14–15 on boards that are already all one length or gang-rippable
+- Six windows still complete from current stock (30/30)
+- Kerf, expansion
+- Sections 14–15 on 8' boards that are already all one length or gang-rippable
 - Recovering the 15th piece on the three 8' boards (still out of scope)
 
 ### Tests
 
-- board-a (live): instructions say through cross-cut / leftover blank
-- Small rails sit in the leftover region (`length_offset` after 124 3/4")
-- 36"+ rails are not packed into the leftover
-- 10' boards still used; craftsmanblog fixture still 14/15
+- board-a (live): through cross-cut / 19 1/4" leftover
+- board-d and board-e: through cross-cut / 57 5/8" leftover; remnant parts fit that leftover
+- board-c unused; waste on used boards under 35%
+- 8' `station_plan` still None; craftsmanblog still 14/15
+
 
 
 

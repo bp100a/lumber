@@ -4,8 +4,8 @@ kerf: "1/8"
 expansion: "1/4"
 
 parts:
-  stile: { width: "2 1/2" }
-  top_rail: { width: "2 1/2" }
+  stile: { width: "2 1/8" }
+  top_rail: { width: "2 1/8" }
   meeting_rail: { width: "1 1/4" }
   bottom_rail: { width: "3 1/2" }
 

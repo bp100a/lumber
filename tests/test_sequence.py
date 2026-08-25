@@ -1,6 +1,7 @@
 from fractions import Fraction
 
 from lumber.diagram import board_regions
+from lumber.dimensions import parse_inches
 from lumber.io import load_problem
 from lumber.models import CutMode, CutPiece, Placement, StockPiece
 from lumber.packer import optimize
@@ -178,3 +179,32 @@ def test_live_board_a_is_through_crosscut() -> None:
         layout.station.station,
         remnant_start - plan.kerf,
     }
+
+
+def test_live_ten_foot_boards_are_through_crosscut_not_full_rips() -> None:
+    plan = optimize(load_problem(LIVE))
+    report = format_text(plan)
+    for stock_id in ("board-d", "board-e"):
+        layout = plan.board_layouts[stock_id]
+        assert layout.mode is CutMode.THROUGH_CROSSCUT
+        assert layout.station is not None
+        assert layout.station.count == 1
+        assert layout.station.remnant_length == parse_inches("57 5/8")
+        chunk = report.split(stock_id)[1].split("Board:")[0]
+        if "Placed:" in chunk:
+            chunk = chunk.split("Placed:")[0]
+        assert "through cross-cut" in chunk
+        assert 'Leftover blank: 57 5/8"' in chunk
+        placed = [p for p in plan.placements if p.stock_id == stock_id]
+        remnant_parts = [
+            p for p in placed if p.length_offset >= layout.station.remnant_start
+        ]
+        assert remnant_parts
+        assert all(p.cut.length <= layout.station.remnant_length for p in remnant_parts)
+
+
+def test_live_skips_the_wide_ten_foot_board() -> None:
+    plan = optimize(load_problem(LIVE))
+    used = {p.stock_id for p in plan.placements}
+    assert "board-c" not in used
+    assert plan.unplaced == []

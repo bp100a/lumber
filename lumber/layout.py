@@ -30,6 +30,10 @@ def station_plan(
     """How many ``station`` blanks fit, remnant start, remnant length.
 
     Kerf sits between stations and after the last station (through-cut).
+    One station is enough on a **10' or longer** board: one 62 1/4" blank
+    plus leftover, instead of a full-length rip. Shorter 8' stock keeps
+    rip-first / cross-cut-first / gang-rip (count would be 1 but remnant
+    packing there loses strips the 8' fixture depends on).
     """
     if station <= 0 or station > board_length:
         return None
@@ -41,7 +45,9 @@ def station_plan(
             break
         used += extra + station
         count += 1
-    if count < 2:
+    if count < 1:
+        return None
+    if count == 1 and board_length < 120:
         return None
     remnant_start = used + kerf
     remnant_length = board_length - remnant_start

@@ -14,7 +14,12 @@ from lumber.dimensions import format_inches
 from lumber.models import BoardLayout, CutPlan, Placement, StockPiece
 from lumber.report import group_by_board, unused_stock_line
 from lumber.sequence import board_instructions
-from lumber.windows import window_completion_lines
+from lumber.windows import (
+    WindowCutRow,
+    WindowCutTable,
+    window_completion_lines,
+    window_cut_tables,
+)
 
 PAGE_W, PAGE_H = letter
 MARGIN = 48
@@ -24,6 +29,19 @@ TITLE_SIZE = 16
 BODY_SIZE = 10
 SMALL_SIZE = 8
 LINE = 13
+TABLE_ROW = 15
+TABLE_TITLE = 12
+TABLE_TITLE_GAP = 6
+TABLE_NAME_W = 88
+TABLE_MEAS_W = 56
+TABLE_QTY_W = 28
+TABLE_GAP = 16
+GRID = HexColor("#c8c8c8")
+TABLE_W = TABLE_NAME_W + TABLE_MEAS_W + TABLE_MEAS_W + TABLE_QTY_W
+
+
+def _inch_label(value: Fraction) -> str:
+    return f'{format_inches(value)}"'
 
 
 def _hex(color: str) -> HexColor:
@@ -182,6 +200,96 @@ class _Pdf:
             self.y -= 10
         self.gap(6)
 
+    def cell(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        text: str,
+        align: str = "center",
+    ) -> None:
+        self.canvas.setFillColor(white)
+        self.canvas.setStrokeColor(GRID)
+        self.canvas.setLineWidth(0.4)
+        self.canvas.rect(x, y, width, height, fill=1, stroke=1)
+        self.canvas.setFillColor(black)
+        self.canvas.setFont("Helvetica", 8)
+        baseline = y + 4
+        if align == "left":
+            self.canvas.drawString(x + 4, baseline, text)
+        else:
+            self.canvas.drawCentredString(x + width / 2, baseline, text)
+
+    def _opening_row(
+        self, left: float, bottom: float, label: str, value: Fraction
+    ) -> None:
+        x = left
+        self.cell(x, bottom, TABLE_NAME_W, TABLE_ROW, label, align="left")
+        x += TABLE_NAME_W
+        self.cell(x, bottom, TABLE_MEAS_W, TABLE_ROW, _inch_label(value))
+
+    def _part_row(self, left: float, bottom: float, row: WindowCutRow) -> None:
+        x = left
+        self.cell(x, bottom, TABLE_NAME_W, TABLE_ROW, row.name, align="left")
+        x += TABLE_NAME_W
+        self.cell(x, bottom, TABLE_MEAS_W, TABLE_ROW, _inch_label(row.length))
+        x += TABLE_MEAS_W
+        self.cell(x, bottom, TABLE_MEAS_W, TABLE_ROW, _inch_label(row.width))
+        x += TABLE_MEAS_W
+        self.cell(x, bottom, TABLE_QTY_W, TABLE_ROW, str(row.quantity))
+
+    def _window_block_height(self, table: WindowCutTable) -> float:
+        rows = len(table.parts)
+        if table.height is not None and table.width is not None:
+            rows += 2
+            spacer = 8
+        else:
+            spacer = 0
+        return TABLE_TITLE + TABLE_TITLE_GAP + TABLE_ROW * rows + spacer + 10
+
+    def _draw_window_block(self, left: float, top: float, table: WindowCutTable) -> None:
+        self.canvas.setFillColor(black)
+        self.canvas.setFont("Helvetica-Bold", 9)
+        title_baseline = top - TABLE_TITLE
+        self.canvas.drawString(left, title_baseline, table.window_id)
+        y = title_baseline - TABLE_TITLE_GAP - TABLE_ROW
+        if table.height is not None and table.width is not None:
+            self._opening_row(left, y, "Height", table.height)
+            y -= TABLE_ROW
+            self._opening_row(left, y, "Width", table.width)
+            y -= TABLE_ROW + 8
+        for row in table.parts:
+            self._part_row(left, y, row)
+            y -= TABLE_ROW
+
+    def draw_window_tables(self, tables: list[WindowCutTable]) -> None:
+        if not tables:
+            return
+        self.text("Cuts by window", size=12, leading=16)
+        col_w = TABLE_W
+        usable = PAGE_W - 2 * MARGIN
+        two_up = col_w * 2 + TABLE_GAP <= usable
+        index = 0
+        while index < len(tables):
+            left_table = tables[index]
+            right_table = None
+            if two_up and index + 1 < len(tables):
+                right_table = tables[index + 1]
+            height = self._window_block_height(left_table)
+            if right_table is not None:
+                height = max(height, self._window_block_height(right_table))
+            self.ensure(height)
+            top = self.y
+            self._draw_window_block(MARGIN, top, left_table)
+            if right_table is not None:
+                self._draw_window_block(MARGIN + col_w + TABLE_GAP, top, right_table)
+                index += 2
+            else:
+                index += 1
+            self.y = top - height
+        self.gap(8)
+
     def save(self) -> None:
         self.canvas.save()
 
@@ -204,7 +312,8 @@ def write_pdf(plan: CutPlan, path: Path) -> None:
     unused = unused_stock_line(plan)
     if unused:
         doc.text(unused)
-    doc.gap(10)
+    doc.gap(8)
+    doc.draw_window_tables(window_cut_tables(plan))
 
     for stock_id in sorted(grouped):
         stock = stock_lookup[stock_id]

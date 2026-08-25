@@ -8,7 +8,7 @@ from fractions import Fraction
 from typing import Any
 
 from lumber.dimensions import parse_inches
-from lumber.models import CutPiece, CutPlan
+from lumber.models import CutPiece, CutPlan, WindowOpening
 
 _PART_KEYS = ("stile", "top_rail", "meeting_rail", "bottom_rail")
 _PART_LABELS = {
@@ -25,14 +25,6 @@ class StormParts:
     top_rail: Fraction
     meeting_rail: Fraction
     bottom_rail: Fraction
-
-
-@dataclass(frozen=True)
-class WindowOpening:
-    id: str
-    height: Fraction
-    width: Fraction
-    meeting: Fraction | None = None
 
 
 def stile_length(height: Fraction, expansion: Fraction) -> Fraction:
@@ -210,3 +202,69 @@ def window_completion_lines(plan: CutPlan) -> list[str]:
     if missing:
         lines.append("Incomplete: " + ", ".join(missing))
     return lines
+
+
+@dataclass(frozen=True)
+class WindowCutRow:
+    name: str
+    length: Fraction
+    width: Fraction
+    quantity: int
+
+
+@dataclass(frozen=True)
+class WindowCutTable:
+    window_id: str
+    height: Fraction | None
+    width: Fraction | None
+    parts: tuple[WindowCutRow, ...]
+
+
+_PART_RANK = {label: index for index, label in enumerate(_PART_LABELS.values())}
+
+
+def _part_label(cut: CutPiece) -> str:
+    if cut.window_id and cut.name.startswith(cut.window_id):
+        return cut.name[len(cut.window_id) :].strip()
+    return cut.name
+
+
+def window_cut_tables(plan: CutPlan) -> list[WindowCutTable]:
+    """Per-window bill of materials: opening size plus each part L × W × qty."""
+    pieces: list[CutPiece] = [p.cut for p in plan.placements] + list(plan.unplaced)
+    by_window: dict[str, list[CutPiece]] = defaultdict(list)
+    for cut in pieces:
+        if cut.window_id:
+            by_window[cut.window_id].append(cut)
+    if not by_window:
+        return []
+
+    openings = {window.id: window for window in plan.windows}
+    order = [window.id for window in plan.windows]
+    for window_id in sorted(by_window):
+        if window_id not in order:
+            order.append(window_id)
+
+    tables: list[WindowCutTable] = []
+    for window_id in order:
+        cuts = by_window.get(window_id)
+        if not cuts:
+            continue
+        counts: dict[tuple[str, Fraction, Fraction], int] = defaultdict(int)
+        for cut in cuts:
+            counts[(_part_label(cut), cut.length, cut.width)] += cut.quantity
+        rows = [
+            WindowCutRow(name=name, length=length, width=width, quantity=qty)
+            for (name, length, width), qty in counts.items()
+        ]
+        rows.sort(key=lambda row: (_PART_RANK.get(row.name, 99), row.name, -row.length))
+        opening = openings.get(window_id)
+        tables.append(
+            WindowCutTable(
+                window_id=window_id,
+                height=opening.height if opening else None,
+                width=opening.width if opening else None,
+                parts=tuple(rows),
+            )
+        )
+    return tables

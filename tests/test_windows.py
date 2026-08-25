@@ -14,6 +14,7 @@ from lumber.windows import (
     stile_length,
     summarize_window_completion,
     window_completion_lines,
+    window_cut_tables,
 )
 
 from tests.examples import CRAFTSMANBLOG, LIVE
@@ -138,15 +139,47 @@ def test_live_stock_completes_all_six_windows() -> None:
     assert summary.completed == 6
     assert plan.unplaced == []
     used = {p.stock_id for p in plan.placements}
-    assert {"board-a", "board-b", "board-c", "board-d", "board-e"} <= used
+    assert {"board-a", "board-b", "board-d", "board-e"} <= used
+    assert "board-c" not in used
     lines = window_completion_lines(plan)
     assert lines[0] == "Windows completed: 6 of 6"
+    assert plan.waste_percent < 35
+
+
+def test_window_cut_tables_group_live_openings() -> None:
+    plan = optimize(load_problem(LIVE))
+    tables = window_cut_tables(plan)
+    assert [t.window_id for t in tables] == [
+        "dining-west",
+        "dining-middle",
+        "dining-east",
+        "living-west",
+        "living-middle",
+        "living-east",
+    ]
+    dining_west = tables[0]
+    assert dining_west.height == parse_inches("62 1/2")
+    assert dining_west.width == parse_inches("20 7/8")
+    parts = {row.name: row for row in dining_west.parts}
+    assert parts["Stiles"].length == parse_inches("62 1/4")
+    assert parts["Stiles"].width == parse_inches("2 1/8")
+    assert parts["Stiles"].quantity == 2
+    assert parts["Top Rail"].length == parse_inches("16 3/8")
+    assert parts["Top Rail"].width == parse_inches("2 1/8")
+    assert parts["Top Rail"].quantity == 1
+    assert parts["Meeting rail"].width == parse_inches("1 1/4")
+    assert parts["Bottom rail"].width == parse_inches("3 1/2")
+    living_middle = next(t for t in tables if t.window_id == "living-middle")
+    assert living_middle.width == parse_inches("42")
+    rails = {row.name: row for row in living_middle.parts}
+    assert rails["Top Rail"].length == parse_inches("37 1/2")
 
 
 def test_handwritten_cuts_have_no_window_completion() -> None:
     plan = optimize(load_problem(CRAFTSMANBLOG))
     assert summarize_window_completion(plan) is None
     assert window_completion_lines(plan) == []
+    assert window_cut_tables(plan) == []
 
 
 def test_live_twelve_foot_boards_park_small_rails_in_remnant() -> None:

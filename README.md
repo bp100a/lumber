@@ -1,6 +1,6 @@
 # Lumber Cut Optimizer
 
-Takes **stock lumber** and either **window openings** or a handwritten **cut list**, then says **which cuts to take from which board**.
+Takes **stock lumber** and either **window openings** or a handwritten **cut list**, then generates a list of cuts to make on each board.
 
 The shop workflow is **rip to width, then cross-cut to length**. Grain stays along the board; pieces are not rotated. All stock and cuts are **1" thick** (thickness is not an input). Kerf defaults to **1/8"** and is consumed on every extra rip and cross-cut.
 

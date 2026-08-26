@@ -6,6 +6,16 @@ The shop workflow is **rip to width, then cross-cut to length**. Grain stays alo
 
 The shop-facing deliverable is a **PDF**: instructions, board-face diagrams, windows completed, unused stock, and (when openings were used) a per-window cut table.
 
+[docs/sample/storm_window.pdf](docs/sample/storm_window.pdf) is a frozen copy of that report. The figures below are crops from it; they do not update when you run `optimize` unless you regenerate them on purpose:
+
+```bash
+uv run --with pymupdf python scripts/refresh_sample.py
+```
+
+![Summary and cuts-by-window tables from the shop PDF](docs/sample/cuts-by-window.png)
+
+![Board-a face diagram and through-cut sequence](docs/sample/board-a.png)
+
 ## Install
 
 Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+. From the repo root:
@@ -23,6 +33,7 @@ uv run lumber optimize examples/storm_window.yaml
 uv run lumber optimize examples/storm_window.yaml --format json
 uv run lumber optimize examples/storm_window.yaml --format pdf -o storm_window.pdf
 uv run lumber optimize examples/storm_window.yaml --format markdown -o storm_window.md
+# Those files are local output (gitignored). The README figures live in docs/sample/.
 uv run lumber optimize examples/storm_window.yaml --kerf 1/8 -o plan.txt
 uv run python -m lumber optimize examples/storm_window.yaml
 ```

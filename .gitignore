@@ -6,3 +6,10 @@ __pycache__/
 .mypy_cache/
 dist/
 build/
+
+# Local optimize output (committed samples live in docs/sample/)
+/storm_window.pdf
+/storm_window.md
+/cuts.md
+/storm_window-board-*.svg
+/*.svg

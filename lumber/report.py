@@ -1,4 +1,8 @@
-"""Format cut plans for the shop."""
+"""Format cut plans for the shop.
+
+Text and JSON go to stdout or a file. Markdown writes a report plus one SVG
+diagram per used board. PDF is handled separately in ``lumber.pdf``.
+"""
 
 from __future__ import annotations
 
@@ -20,6 +24,7 @@ def _unused_stock(plan: CutPlan) -> list[StockPiece]:
 
 
 def unused_stock_line(plan: CutPlan) -> str | None:
+    """Summary line listing boards that received no cuts, or None."""
     unused = _unused_stock(plan)
     if not unused:
         return None
@@ -28,6 +33,7 @@ def unused_stock_line(plan: CutPlan) -> str | None:
 
 
 def group_by_board(plan: CutPlan) -> dict[str, list[Placement]]:
+    """Placements keyed by stock id, sorted by rip then length offset."""
     grouped: dict[str, list[Placement]] = defaultdict(list)
     for placement in plan.placements:
         grouped[placement.stock_id].append(placement)
@@ -41,6 +47,7 @@ def _stock_lookup(plan: CutPlan) -> dict[str, tuple[Fraction, Fraction]]:
 
 
 def format_text(plan: CutPlan) -> str:
+    """Plain-text shop report: per-board instructions, waste, unused stock."""
     lines: list[str] = []
     stock_by_id = _stock_lookup(plan)
     grouped = group_by_board(plan)
@@ -83,6 +90,7 @@ def format_text(plan: CutPlan) -> str:
 
 
 def format_json(plan: CutPlan) -> str:
+    """Machine-readable plan: placements, unplaced pieces, waste, windows."""
     payload = {
         "kerf": format_inches(plan.kerf),
         "placements": [

@@ -1,8 +1,9 @@
 """Board cut mode and station geometry.
 
-Packer records a StationPlan when it packs through-cut blanks. Sequence and
-diagrams read BoardLayout from the CutPlan instead of reconstructing intent
-from rectangles. Callers without a stored layout can still resolve one.
+The packer records a ``StationPlan`` when it packs through-cut blanks.
+Sequence and diagrams read ``BoardLayout`` from the ``CutPlan`` instead of
+reconstructing intent from rectangles. Callers without a stored layout can
+still resolve one from geometry.
 """
 
 from __future__ import annotations
@@ -68,6 +69,7 @@ def _straddles(placement: Placement, at: Fraction) -> bool:
 
 
 def _fits_through_cut(placements: list[Placement], plan: StationPlan, kerf: Fraction) -> bool:
+    """True when no piece straddles a through-cut and remnant parts start after it."""
     cuts = [i * (plan.station + kerf) + plan.station for i in range(plan.count)]
     cuts.append(plan.remnant_start)
     if any(_straddles(p, at) for p in placements for at in cuts):

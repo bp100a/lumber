@@ -22,6 +22,7 @@ from lumber.validate import expand_cuts, expand_stock
 
 @dataclass
 class _PackedStrip:
+    """One rip-width strip packed along its length with same-width pieces."""
     width: Fraction
     pieces: list[CutPiece] = field(default_factory=list)
     used_length: Fraction = field(default_factory=lambda: Fraction(0))
@@ -29,6 +30,7 @@ class _PackedStrip:
 
 @dataclass
 class _BoardState:
+    """Remaining width on a physical board, or on a virtual station/remnant blank."""
     stock: StockPiece
     used_width: Fraction = field(default_factory=lambda: Fraction(0))
     blank_length: Fraction | None = None
@@ -36,6 +38,7 @@ class _BoardState:
 
     @property
     def pack_length(self) -> Fraction:
+        """Length available on this blank (station/remnant, or the full board)."""
         return self.stock.length if self.blank_length is None else self.blank_length
 
 
@@ -115,6 +118,7 @@ def _placements_for_strip(
     kerf: Fraction,
     length_offset: Fraction = Fraction(0),
 ) -> list[Placement]:
+    """Lay the strip's pieces along length, inserting kerf between them."""
     placements: list[Placement] = []
     cursor = length_offset
     for index, piece in enumerate(strip.pieces):
@@ -166,6 +170,7 @@ def _partition_by_length(
     pieces: list[CutPiece],
     board_length: Fraction,
 ) -> tuple[list[CutPiece], list[CutPiece]]:
+    """Split pieces that fit this stock length from those that are too long."""
     fit: list[CutPiece] = []
     too_long: list[CutPiece] = []
     for piece in pieces:
@@ -181,6 +186,7 @@ def _strips_for_pieces(
     board_length: Fraction,
     kerf: Fraction,
 ) -> list[_PackedStrip]:
+    """Group pieces by width and pack each group into strips of ``board_length``."""
     by_width: dict[Fraction, list[CutPiece]] = defaultdict(list)
     for piece in pieces:
         by_width[piece.width].append(piece)
@@ -196,6 +202,7 @@ def _virtual_blanks(
     plan: StationPlan,
     kerf: Fraction,
 ) -> tuple[list[_BoardState], list[_BoardState]]:
+    """Split matching boards into station blanks plus a remnant blank each."""
     stations: list[_BoardState] = []
     remnants: list[_BoardState] = []
     for board in boards:
@@ -229,6 +236,7 @@ def _mark_consumed(boards: list[_BoardState], stock_ids: set[str]) -> None:
 
 
 def _blanks_for(boards: list[_BoardState], stock_ids: set[str]) -> list[_BoardState]:
+    """Keep only virtual blanks whose physical board already received a piece."""
     return [board for board in boards if board.stock.id in stock_ids]
 
 

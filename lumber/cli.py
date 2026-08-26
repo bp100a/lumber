@@ -1,4 +1,9 @@
-"""Command-line interface."""
+"""Command-line interface.
+
+``lumber optimize <file>`` loads a problem, packs the cuts, and writes a
+text, JSON, markdown, or PDF shop report. Format is inferred from ``-o``
+when ``--format`` is omitted.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +27,7 @@ _SUFFIX_FORMATS = {
 
 
 def _resolve_format(fmt: str, output: Path | None, explicit: bool) -> str:
+    """Pick an output format from ``--format`` or the ``-o`` file suffix."""
     if output is None:
         return fmt
     inferred = _SUFFIX_FORMATS.get(output.suffix.lower())
@@ -35,6 +41,10 @@ def _resolve_format(fmt: str, output: Path | None, explicit: bool) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse argv, optimize the problem file, and write the shop report.
+
+    Returns 1 if the problem is invalid or pieces remain unplaced.
+    """
     parser = argparse.ArgumentParser(
         description="Optimize lumber usage: rip to width, cut to length.",
     )

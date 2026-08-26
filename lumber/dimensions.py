@@ -1,4 +1,8 @@
-"""Parse and format fractional inch dimensions."""
+"""Parse and format fractional inch dimensions.
+
+Shop sizes are stored as ``fractions.Fraction`` so mixed numbers like
+``4 3/4`` and ``1 11/16`` stay exact. Strings may include a trailing ``"``.
+"""
 
 from __future__ import annotations
 

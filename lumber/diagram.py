@@ -1,4 +1,9 @@
-"""Scale face diagrams of a board's rip strips and cross-cuts."""
+"""Scale face diagrams of a board's rip strips and cross-cuts.
+
+``board_regions`` builds piece / kerf / waste rectangles in inches.
+``board_svg`` draws them for markdown reports; the PDF reuses the same
+regions with ReportLab.
+"""
 
 from __future__ import annotations
 
@@ -58,6 +63,7 @@ class DiagramRect:
 
 
 def fill_for(name: str) -> str:
+    """Stable fill color for a part name (same hue across boards)."""
     return _FILLS[sum(ord(ch) for ch in name) % len(_FILLS)]
 
 
@@ -85,6 +91,7 @@ def _regions_rip_first(
     placements: list[Placement],
     kerf: Fraction,
 ) -> list[DiagramRect]:
+    """Strip regions along length, including gang-rip combined blanks."""
     regions: list[DiagramRect] = []
     occupied_width = Fraction(0)
     for run in iter_strip_runs(placements, kerf):
@@ -128,6 +135,7 @@ def _add_strip_length_regions(
     stock: StockPiece,
     kerf: Fraction,
 ) -> None:
+    """Pieces, kerf, and leftover along one rip-first strip."""
     cursor = Fraction(0)
     for placement in strip.placements:
         if placement.length_offset > cursor:
@@ -164,6 +172,7 @@ def _add_gang_regions(
     stock: StockPiece,
     kerf: Fraction,
 ) -> None:
+    """Pieces, between-strip kerf, and combined-width offcut for a gang rip."""
     for strip in gang:
         for placement in strip.placements:
             regions.append(_piece_rect(placement))
@@ -255,6 +264,7 @@ def _regions_crosscut_first(
 
 
 def _piece_rect(placement: Placement) -> DiagramRect:
+    """Labeled rectangle for one finished part on the board face."""
     return DiagramRect(
         kind="piece",
         length_offset=placement.length_offset,
@@ -273,6 +283,7 @@ def _add_width_gaps(
     span_length: Fraction,
     length_offset: Fraction = Fraction(0),
 ) -> None:
+    """Kerf or waste between rip strips and leftover width on a blank."""
     occupied_width = Fraction(0)
     for rip_offset in sorted(by_rip):
         strip_width = by_rip[rip_offset][0].cut.width
@@ -312,6 +323,7 @@ def _add_length_gaps(
     end: Fraction,
     kerf: Fraction,
 ) -> None:
+    """Kerf or waste along one strip between ``start`` and ``end``."""
     cursor = start
     for placement in sorted(placements, key=lambda p: p.length_offset):
         if placement.length_offset > cursor:
@@ -425,6 +437,7 @@ def _regions_through_crosscut(
 
 
 def _scales(stock: StockPiece) -> tuple[float, float]:
+    """Pixels per inch (x = length, y = width); width may be exaggerated."""
     scale_x = min(INCH_PX, MAX_DIAGRAM_WIDTH / float(stock.length))
     scale_y = max(scale_x, MIN_BOARD_HEIGHT / float(stock.width))
     return scale_x, scale_y

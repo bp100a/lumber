@@ -1,4 +1,8 @@
-"""Validate problem inputs before optimization."""
+"""Validate problem inputs before optimization.
+
+Also expands ``quantity > 1`` stock and cuts into individual boards and
+pieces so the packer can place them one at a time.
+"""
 
 from __future__ import annotations
 

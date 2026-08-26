@@ -1,4 +1,8 @@
-"""PDF shop report: cut instructions and board-face diagrams."""
+"""PDF shop report: cut instructions and board-face diagrams.
+
+Letter-size cutsheet: summary, per-window cut tables (when openings were
+used), a face diagram of each used board, and the rip / cross-cut list.
+"""
 
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ TABLE_W = TABLE_NAME_W + TABLE_MEAS_W + TABLE_MEAS_W + TABLE_QTY_W
 
 
 def _inch_label(value: Fraction) -> str:
+    """Mixed-number inches with a ``"`` suffix, e.g. ``62 1/2"``."""
     return f'{format_inches(value)}"'
 
 
@@ -49,12 +54,14 @@ def _hex(color: str) -> HexColor:
 
 
 def _board_scales(stock: StockPiece) -> tuple[float, float]:
+    """Points per inch so the board fits the page; width may be exaggerated."""
     scale_x = DIAGRAM_MAX_W / float(stock.length)
     scale_y = max(scale_x, DIAGRAM_MIN_H / float(stock.width))
     return scale_x, scale_y
 
 
 def _diagram_size(stock: StockPiece) -> tuple[float, float, bool]:
+    """Board diagram width, height, and whether width is exaggerated."""
     scale_x, scale_y = _board_scales(stock)
     return (
         float(stock.length) * scale_x,
@@ -69,6 +76,7 @@ def _cut_lines(
     kerf: Fraction,
     layout: BoardLayout | None = None,
 ) -> list[str]:
+    """Indented shop instruction lines for one board."""
     lines: list[str] = []
     for indent, step in board_instructions(placements, stock, kerf, layout=layout):
         lines.append(("    " * indent) + step)
@@ -81,6 +89,7 @@ def _section_height(
     kerf: Fraction,
     layout: BoardLayout | None = None,
 ) -> float:
+    """Vertical space needed for one board heading, diagram, and cut list."""
     _w, diagram_h, exaggerated = _diagram_size(stock)
     extra = 14 if exaggerated else 0
     return (
@@ -95,16 +104,19 @@ def _section_height(
 
 
 class _Pdf:
+    """Letter-page canvas with a downward y cursor and page breaks."""
     def __init__(self, path: Path) -> None:
         self.canvas = canvas.Canvas(str(path), pagesize=letter, pageCompression=0)
         self.y = PAGE_H - MARGIN
 
     def ensure(self, height: float) -> None:
+        """Start a new page if ``height`` would run past the bottom margin."""
         if self.y - height < MARGIN:
             self.canvas.showPage()
             self.y = PAGE_H - MARGIN
 
     def text(self, message: str, size: int = BODY_SIZE, leading: float | None = None) -> None:
+        """Draw one left-aligned line and advance the cursor."""
         leading = LINE if leading is None else leading
         self.ensure(leading)
         self.canvas.setFillColor(black)
@@ -122,6 +134,7 @@ class _Pdf:
         kerf: Fraction,
         layout: BoardLayout | None = None,
     ) -> None:
+        """Draw the board face (pieces, kerf, hatched waste) and axis labels."""
         scale_x, scale_y = _board_scales(stock)
         board_w, board_h, exaggerated = _diagram_size(stock)
         label_band = 28 + (12 if exaggerated else 0)
@@ -209,6 +222,7 @@ class _Pdf:
         text: str,
         align: str = "center",
     ) -> None:
+        """One table cell; mixed numbers stay in a single cell with ``"``."""
         self.canvas.setFillColor(white)
         self.canvas.setStrokeColor(GRID)
         self.canvas.setLineWidth(0.4)
@@ -240,6 +254,7 @@ class _Pdf:
         self.cell(x, bottom, TABLE_QTY_W, TABLE_ROW, str(row.quantity))
 
     def _window_block_height(self, table: WindowCutTable) -> float:
+        """Height of one window table including title gap and opening rows."""
         rows = len(table.parts)
         if table.height is not None and table.width is not None:
             rows += 2
@@ -249,6 +264,7 @@ class _Pdf:
         return TABLE_TITLE + TABLE_TITLE_GAP + TABLE_ROW * rows + spacer + 10
 
     def _draw_window_block(self, left: float, top: float, table: WindowCutTable) -> None:
+        """Draw one window's heading, opening size, and part rows."""
         self.canvas.setFillColor(black)
         self.canvas.setFont("Helvetica-Bold", 9)
         title_baseline = top - TABLE_TITLE
@@ -264,6 +280,7 @@ class _Pdf:
             y -= TABLE_ROW
 
     def draw_window_tables(self, tables: list[WindowCutTable]) -> None:
+        """Two-up 'Cuts by window' grids: opening size plus part L × W × qty."""
         if not tables:
             return
         self.text("Cuts by window", size=12, leading=16)

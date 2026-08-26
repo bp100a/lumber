@@ -1,4 +1,9 @@
-"""Data models for stock, cuts, and placement plans."""
+"""Data models for stock, cuts, and placement plans.
+
+``Problem`` is the packer input. ``CutPlan`` is the result: placements,
+unplaced pieces, per-board cut mode, and (when openings were used) the
+original window measurements for the shop PDF.
+"""
 
 from __future__ import annotations
 
@@ -27,12 +32,14 @@ class StationPlan:
 
 @dataclass(frozen=True)
 class BoardLayout:
+    """How this board should be cut, plus station geometry when through-cut."""
     mode: CutMode
     station: StationPlan | None = None
 
 
 @dataclass(frozen=True)
 class StockPiece:
+    """One board (or a quantity of identical boards) from the stock list."""
     id: str
     width: Fraction
     length: Fraction
@@ -45,6 +52,7 @@ class StockPiece:
 
 @dataclass(frozen=True)
 class CutPiece:
+    """One finished part to cut. ``window_id`` is set when derived from openings."""
     name: str
     width: Fraction
     length: Fraction
@@ -59,6 +67,7 @@ class CutPiece:
 
 @dataclass(frozen=True)
 class Placement:
+    """A cut sitting on a board: rip offset is across width, length along the board."""
     stock_id: str
     cut: CutPiece
     rip_offset: Fraction
@@ -71,6 +80,7 @@ class Placement:
 
 @dataclass
 class CutPlan:
+    """Packed result: where each piece sits, leftover stock, and shop cut mode."""
     placements: list[Placement] = field(default_factory=list)
     unplaced: list[CutPiece] = field(default_factory=list)
     kerf: Fraction = Fraction(1, 8)
@@ -84,6 +94,7 @@ class CutPlan:
 
     @property
     def used_stock(self) -> list[StockPiece]:
+        """Boards that received at least one cut."""
         used = {p.stock_id for p in self.placements}
         return [s for s in self.stock if s.id in used]
 
@@ -104,6 +115,7 @@ class CutPlan:
 
     @property
     def waste_percent(self) -> float:
+        """Waste as a percent of used-board area (or all stock if nothing placed)."""
         basis = self.used_stock_area if self.placements else self.stock_area
         if basis == 0:
             return 0.0
@@ -112,6 +124,7 @@ class CutPlan:
 
 @dataclass(frozen=True)
 class WindowOpening:
+    """Rough opening height and width; optional meeting-rail override."""
     id: str
     height: Fraction
     width: Fraction
@@ -120,6 +133,7 @@ class WindowOpening:
 
 @dataclass
 class Problem:
+    """Stock, cuts (or derived window parts), kerf, and original openings."""
     stock: list[StockPiece]
     cuts: list[CutPiece]
     kerf: Fraction = Fraction(1, 8)

@@ -1,4 +1,9 @@
-"""Derive storm-window cut pieces from opening measurements."""
+"""Derive storm-window cut pieces from opening measurements.
+
+Each opening becomes two stiles plus top, meeting, and bottom rails. Frame
+size is opening minus expansion; rails sit between the stiles. Also builds
+the per-window cut tables and completion summary for shop reports.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +26,7 @@ _PART_LABELS = {
 
 @dataclass(frozen=True)
 class StormParts:
+    """Finished widths for stile, top rail, meeting rail, and bottom rail."""
     stile: Fraction
     top_rail: Fraction
     meeting_rail: Fraction
@@ -28,6 +34,7 @@ class StormParts:
 
 
 def stile_length(height: Fraction, expansion: Fraction) -> Fraction:
+    """Stile length is opening height minus expansion."""
     return height - expansion
 
 
@@ -41,6 +48,7 @@ def cuts_for_window(
     parts: StormParts,
     expansion: Fraction,
 ) -> list[CutPiece]:
+    """Two stiles and three rails for one opening."""
     length = stile_length(window.height, expansion)
     rail = rail_length(window.width, expansion, parts.stile)
     if length <= 0:
@@ -91,6 +99,7 @@ def cuts_from_windows(
     parts: StormParts,
     expansion: Fraction,
 ) -> list[CutPiece]:
+    """Expand every opening into cut pieces, in file order."""
     cuts: list[CutPiece] = []
     for window in windows:
         cuts.extend(cuts_for_window(window, parts, expansion))
@@ -109,6 +118,7 @@ def _part_width(parts: dict[str, Any], key: str) -> Fraction:
 
 
 def parse_parts(raw: dict[str, Any] | None) -> StormParts:
+    """Read ``parts:`` widths from the problem file."""
     if not raw:
         raise ValueError("parts is required when windows are listed")
     widths = {key: _part_width(raw, key) for key in _PART_KEYS}
@@ -116,6 +126,7 @@ def parse_parts(raw: dict[str, Any] | None) -> StormParts:
 
 
 def parse_windows(items: list[dict[str, Any]]) -> list[WindowOpening]:
+    """Read ``windows:`` openings from the problem file."""
     windows: list[WindowOpening] = []
     for index, item in enumerate(items):
         meeting_raw = item.get("meeting")
@@ -131,6 +142,7 @@ def parse_windows(items: list[dict[str, Any]]) -> list[WindowOpening]:
 
 
 def cuts_from_problem_data(data: dict[str, Any]) -> list[CutPiece]:
+    """Build the full cut list from a problem mapping that has ``windows:``."""
     expansion = parse_inches(data.get("expansion", "1/4"))
     parts = parse_parts(data.get("parts"))
     windows = parse_windows(data.get("windows") or [])
@@ -139,6 +151,7 @@ def cuts_from_problem_data(data: dict[str, Any]) -> list[CutPiece]:
 
 @dataclass(frozen=True)
 class WindowStatus:
+    """How many planned pieces for one window are placed vs needed."""
     window_id: str
     placed: int
     needed: int
@@ -150,6 +163,7 @@ class WindowStatus:
 
 @dataclass(frozen=True)
 class WindowCompletionSummary:
+    """Per-window completion counts for the shop report header."""
     windows: tuple[WindowStatus, ...]
 
     @property
@@ -191,6 +205,7 @@ def summarize_window_completion(plan: CutPlan) -> WindowCompletionSummary | None
 
 
 def window_completion_lines(plan: CutPlan) -> list[str]:
+    """Text lines: how many windows are complete, plus id lists."""
     summary = summarize_window_completion(plan)
     if summary is None:
         return []
@@ -206,6 +221,7 @@ def window_completion_lines(plan: CutPlan) -> list[str]:
 
 @dataclass(frozen=True)
 class WindowCutRow:
+    """One part line in a window table: name, length, width, quantity."""
     name: str
     length: Fraction
     width: Fraction
@@ -214,6 +230,7 @@ class WindowCutRow:
 
 @dataclass(frozen=True)
 class WindowCutTable:
+    """Opening size plus grouped parts for one window on the PDF."""
     window_id: str
     height: Fraction | None
     width: Fraction | None

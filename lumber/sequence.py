@@ -1,4 +1,8 @@
-"""Per-board shop sequence: rip-first, cross-cut-first, gang-rip, or through-cut."""
+"""Per-board shop sequence: rip-first, cross-cut-first, gang-rip, or through-cut.
+
+Turns placements into indented instruction lines for text, markdown, and PDF
+reports. Cut mode comes from ``BoardLayout`` when the packer stored one.
+"""
 
 from __future__ import annotations
 
@@ -40,10 +44,12 @@ def shared_length(placements: list[Placement]) -> Fraction | None:
 
 
 def is_crosscut_first(placements: list[Placement]) -> bool:
+    """True when every piece on the board is the same finished length."""
     return common_length(placements) is not None
 
 
 def collect_strips(placements: list[Placement]) -> list[RipStrip]:
+    """Group placements by rip offset, left-to-right across the board width."""
     by_rip: dict[Fraction, list[Placement]] = defaultdict(list)
     for placement in placements:
         by_rip[placement.rip_offset].append(placement)
@@ -110,6 +116,7 @@ def iter_strip_runs(
 
 
 def gang_combined_width(gang: list[RipStrip]) -> Fraction:
+    """Finished width of adjacent strips ripped as one blank."""
     return gang[-1].rip_offset + gang[-1].width - gang[0].rip_offset
 
 
@@ -166,6 +173,7 @@ def _through_crosscut_instructions(
     kerf: Fraction,
     plan: StationPlan,
 ) -> list[tuple[int, str]]:
+    """Through-cut station blanks, then rip; leftover is a full-width remnant."""
     steps: list[tuple[int, str]] = [
         (0, "Sequence: through cross-cut (shorten long rips)"),
     ]
@@ -224,6 +232,7 @@ def _rip_first_instructions(
     stock: StockPiece,
     kerf: Fraction,
 ) -> list[tuple[int, str]]:
+    """Rip each strip (or gang), then cross-cut parts to length."""
     runs = iter_strip_runs(placements, kerf)
     steps: list[tuple[int, str]] = []
     header_emitted = False
@@ -239,6 +248,7 @@ def _rip_first_instructions(
 
 
 def _strip_rip_first_instructions(strip: RipStrip) -> list[tuple[int, str]]:
+    """Rip one strip, then cross-cut each part on it."""
     steps: list[tuple[int, str]] = [
         (
             0,
@@ -276,6 +286,7 @@ def _gang_instructions(
     stock: StockPiece,
     kerf: Fraction,
 ) -> list[tuple[int, str]]:
+    """Rip adjacent same-length strips as one blank, cross-cut, then rip apart."""
     length = gang[0].shared_length
     assert length is not None
     combined = gang_combined_width(gang)
@@ -348,6 +359,7 @@ def _crosscut_first_instructions(
     kerf: Fraction,
     length: Fraction,
 ) -> list[tuple[int, str]]:
+    """Cross-cut the common length first, then rip each blank to width."""
     steps: list[tuple[int, str]] = [
         (0, f'Sequence: cross-cut first (all parts {format_inches(length)}")'),
     ]

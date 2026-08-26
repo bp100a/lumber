@@ -1,3 +1,5 @@
+"""Run the lumber CLI as ``python -m lumber``."""
+
 from lumber.cli import main
 
 if __name__ == "__main__":

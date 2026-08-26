@@ -1,4 +1,8 @@
-"""Load optimization problems from YAML or JSON files."""
+"""Load optimization problems from YAML or JSON files.
+
+A problem lists stock boards plus either handwritten ``cuts`` or ``windows``
+(openings that expand into stiles and rails). Kerf defaults to 1/8".
+"""
 
 from __future__ import annotations
 
@@ -14,6 +18,7 @@ from lumber.windows import cuts_from_problem_data, parse_windows
 
 
 def _load_raw(path: Path) -> dict[str, Any]:
+    """Read a YAML or JSON mapping from disk."""
     text = path.read_text(encoding="utf-8")
     if path.suffix.lower() in {".yaml", ".yml"}:
         data = yaml.safe_load(text)
@@ -27,6 +32,7 @@ def _load_raw(path: Path) -> dict[str, Any]:
 
 
 def _parse_stock(items: list[dict[str, Any]]) -> list[StockPiece]:
+    """Build stock boards from the ``stock:`` list in the problem file."""
     stock: list[StockPiece] = []
     for index, item in enumerate(items):
         stock_id = str(item.get("id") or f"board-{index + 1}")
@@ -42,6 +48,7 @@ def _parse_stock(items: list[dict[str, Any]]) -> list[StockPiece]:
 
 
 def _parse_cuts(items: list[dict[str, Any]]) -> list[CutPiece]:
+    """Build handwritten cut pieces from the ``cuts:`` list."""
     cuts: list[CutPiece] = []
     for item in items:
         cuts.append(
@@ -56,6 +63,7 @@ def _parse_cuts(items: list[dict[str, Any]]) -> list[CutPiece]:
 
 
 def load_problem(path: str | Path) -> Problem:
+    """Load stock, kerf, and either handwritten cuts or window-derived parts."""
     data = _load_raw(Path(path))
     kerf = parse_inches(data.get("kerf", "1/8"))
     stock = _parse_stock(data.get("stock") or [])

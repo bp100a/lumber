@@ -2,9 +2,9 @@
 
 A Python tool that takes **stock lumber** and either a handwritten **cut list** or **window openings**, then outputs **which cuts to take from which board**.
 
-This plan incorporates every decision from the original design plus later changes (storm windows, kerf, shop PDF, per-window cut tables, cross-cut-first / gang-rip sequence, cuts-from-openings, mixed-length packing, shorter rips on 12' and 10' boards).
+This plan incorporates every decision from the original design plus later changes (storm windows, kerf, shop PDF, per-window cut tables, cross-cut-first / gang-rip sequence, cuts-from-openings, mixed-length packing, shorter rips on 12' and 10' boards, 1/8" glass class / fatter members, dining-side opening).
 
-**Live widths** in `examples/storm_window.yaml` are stile/top rail **2 1/8"** (not the historical 2 1/2" worked example in older sections). Formula tests still check 2 1/2" and 1 11/16" so the length math stays pinned. For whether this document is enough to rebuild the code, see section 19.
+**Live base widths** in `examples/storm_window.yaml` are stile/top rail **2 1/8"** on the **smaller** opening in a 1/8" class (dining). Living pairs that are 1/8" wider get stiles **2 3/16"** so rail length (glass) matches (section 20). Formula tests still check 2 1/2" and 1 11/16" so the length math stays pinned. For whether this document is enough to rebuild the code, see section 19.
 
 ---
 
@@ -20,7 +20,7 @@ This is a **2D cutting-stock** problem on the **face** of each board, solved wit
 
 Each stock piece is a rectangle **W × L**. Each cut needs **w × l**. Pieces are **not** rotated 90° (grain stays aligned with board length).
 
-### Live example: six storm windows
+### Live example: seven storm windows
 
 **Stock** (all 4/4, 1" thick) — `examples/storm_window.yaml` / `.json`:
 
@@ -35,9 +35,9 @@ Each stock piece is a rectangle **W × L**. Each cut needs **w × l**. Pieces ar
 | board-g | 4 7/8 | 97 (8' 1") |
 | board-h | 5 1/2 | 97 (8' 1") |
 
-**Openings** (section 16) derive **30 pieces**: 12 stiles @ 62 1/4" × 2 1/8", plus top / meeting / bottom rails per window. Part widths: stile and top rail **2 1/8"**, meeting rail **1 1/4"**, bottom rail **3 1/2"**.
+**Openings** (sections 16 and 20) derive **35 pieces** from **seven** frames: dining west/middle/east/side + living west/middle/east. All **62 1/2" high**. Base stile/top rail **2 1/8"** (smaller width in a 1/8" class); living 21" / 42" stiles **2 3/16"** so rails match dining. dining-side is **40"** (own class, 2 1/8" stiles, 35 1/2" rails). Meeting rail **1 1/4"**, bottom rail **3 1/2"**.
 
-**Result with the current packer:** all **30 pieces place**; **6 of 6** windows complete; waste about **30%** on used boards. Used: board-a, board-b, board-d, board-e. Unused leftover: board-c (wide 10'), board-f, board-g, board-h. 10' boards are through-cut (62 1/4" blank + 57 5/8" leftover), not a 10' rip.
+**Result with the current packer:** all **35 pieces place**; **7 of 7** windows complete; waste about **34%** on used boards. Used: board-a through board-e (including wide 10' board-c). Unused leftover: board-f, board-g, board-h. 10' boards are through-cut (62 1/4" blank + 57 5/8" leftover), not a 10' rip.
 
 ### Historical fixture: three windows on three 8' boards
 
@@ -54,7 +54,8 @@ Each stock piece is a rectangle **W × L**. Each cut needs **w × l**. Pieces ar
 | Grain rotation | **Not allowed** | Original plan default |
 | Kerf | First-class input, default **1/8"**, overridable in the file and via `--kerf` | User question + original plan |
 | Project type | **Storm windows** (stiles, top rail, meeting rail, bottom rail) | User correction (not door frames) |
-| Window count | **Six openings**: dining west/middle/east + living west/middle/east (section 16) | User |
+| Window count | **Seven openings**: dining west/middle/east/side + living west/middle/east (sections 16, 20) | User |
+| 1/8" glass class | Openings that differ by **1/8"** on an axis share inner size: extra frame goes into the two members (1/16" each) on the **larger** opening. `parts:` widths are the smaller opening. dining-side 40" is its own class | User |
 | Expansion clearance | Subtract **1/4"** from opening height and width so the finished frame can swell | User |
 | Frame joinery | Stiles run full height; rails sit **between** the stiles | User + original cut list |
 | Shortage behavior | Place what fits; print **INSUFFICIENT STOCK** and list unplaced pieces; CLI exit code 1 | User |
@@ -149,7 +150,7 @@ This is Phase 1 of the original plan, specialized to guillotine rip strips (not 
 
 | Item | Status | Why deferred |
 |------|--------|--------------|
-| OR-Tools CP-SAT / MIP | Not started | Greedy places the live 30-piece list; 14/15 bound still holds for the 3-board fixture |
+| OR-Tools CP-SAT / MIP | Not started | Greedy places the live 35-piece list; 14/15 bound still holds for the 3-board fixture |
 | Column generation | Not started | Same |
 | CSV input | Not started | YAML/JSON covers the workflow |
 | ASCII/SVG as a standalone format | Superseded | Replaced by the markdown report + board diagram (section 12) |
@@ -161,15 +162,11 @@ This is Phase 1 of the original plan, specialized to guillotine rip strips (not 
 
 ## 6. Feasibility notes
 
-### Live six-window list (eight boards)
+### Live seven-window list (eight boards)
 
-Under rip-then-crosscut with **per-length** strip packing:
+Under rip-then-crosscut with **per-length** strip packing, two 62 1/4" stiles still share a **12'** strip and not a **10'** pair (`124 3/4" > 120"`). Living stiles are **2 3/16"** (section 20); dining and dining-side stiles stay **2 1/8"**. dining-side adds 35 1/2" rails.
 
-- Two 62 1/4" stiles share a **12'** strip (`62 1/4 + kerf + 62 1/4 = 124 3/4" ≤ 144"`).
-- The same pair does **not** share a **10'** strip (`124 3/4" > 120"`), so leftover stiles go one-per-strip on 10' boards (section 17).
-- Bottom rails (3 1/2") take a 12' strip on board-b; stiles and top rails fill remaining 12' and 10' width.
-
-**Result: 30 of 30 pieces place; 6 of 6 windows complete; ~30% waste on used boards.** Unused leftover: board-c, board-f, board-g, board-h. 10' boards through-cut (section 18), not full-length rips.
+**Result: 35 of 35 pieces place; 7 of 7 windows complete; ~34% waste on used boards.** Unused leftover: board-f, board-g, board-h. 10' boards through-cut (section 18), including board-c.
 
 ### Historical three-window list (three 8' boards)
 
@@ -279,11 +276,11 @@ Board: 7 3/8" x 1" x 144" (board-a)
     Rip @ 0" -> 3 1/2" strip
     ...
 
-Placed: 30 pieces
-Waste: … sq in (~30% on used boards)
-Windows completed: 6 of 6
-Complete: dining-east, dining-middle, dining-west, living-east, living-middle, living-west
-Unused stock: board-c, board-f, board-g, board-h
+Placed: 35 pieces
+Waste: … sq in (~34% on used boards)
+Windows completed: 7 of 7
+Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
+Unused stock: board-f, board-g, board-h
 ```
 
 When pieces do not fit (three-board fixture):
@@ -314,7 +311,7 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | Validation: cut wider than stock | Done |
 | Two small windows: all 10 pieces placed | Done |
 | Three-board fixture: 14 placed, 38 1/4" top rail unplaced, `INSUFFICIENT STOCK` | Done |
-| Live six-window list: 30 placed, 6 of 6 windows complete | Done |
+| Live seven-window list: 35 placed, 7 of 7, glass-class stile widths, dining-side 35 1/2" rails | Done |
 | Mixed stock lengths: leftover stiles pack onto shorter boards (not only the longest) | Done |
 | CLI: text/json, `--kerf`, exit code 1 when short, exit 0 when complete | Done |
 | Markdown report writes a `.md` with heading, summary, and unplaced list | Done |
@@ -330,8 +327,9 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | Derive cut list from window openings (height/width − 1/4", rails between stiles) | Done |
 | PDF/text/markdown report how many windows are complete and which stock is unused | Done |
 | PDF per-window cut table: opening H×W plus part L×W×qty; each measurement one cell with `"` (`62 1/2"`, not `62` \| `1/2`) | Done |
+| PDF stock used list after window tables; assembled frames + two glass lites at the end (section 21) | Done |
 | 12' boards: through cross-cut so rips are not full length; small parts in the leftover (section 18) | Done |
-| 10' boards: one station + leftover (no 10' rip); wide unused 10' stock listed leftover | Done |
+| 10' boards: one station + leftover (no 10' rip); unused leftover stock listed, not drawn | Done |
 | OR-Tools golden comparison | Deferred with Phase 2 |
 
 ---
@@ -345,7 +343,7 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | 3 | `validate.py` | Done |
 | 4 | Rip-then-crosscut packer (widest-first; per stock length) | Done |
 | 5 | `report.py`, `cli.py`, `python -m lumber` | Done |
-| 6 | Live example (6 windows, 8 boards) + 3-window craftsmanblog fixture | Done |
+| 6 | Live example (7 windows, 8 boards) + 3-window craftsmanblog fixture | Done |
 | 7 | Insufficient-stock reporting | Done |
 | 8 | Kerf override + kerf tests | Done |
 | 9 | OR-Tools packer | Deferred |
@@ -358,27 +356,32 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | 16 | Report windows completed and unused stock on the shop cutsheet | Done |
 | 17 | 12' boards: pack small parts into leftover length; through cross-cut, then shorter rips (section 18) | Done |
 | 18 | PDF per-window cut table (opening size + part list; mixed numbers with `"` in one cell) | Done |
-| 19 | 10' boards: one 62 1/4" station + 57 5/8" leftover (no 10' rip); skip unused wide 10' stock | Done |
+| 19 | 10' boards: one 62 1/4" station + 57 5/8" leftover (no 10' rip); unused leftover stock listed, not drawn | Done |
 | 20 | `layout.py`: shared `station_plan` / `BoardLayout` for packer, sequence, and diagrams | Done |
+| 21 | 1/8" glass class: fatter members on the larger opening (section 20); dining-side 40" opening | Done |
+| 22 | PDF stock used list, assembled frames, and glass sizes (section 21) | Done |
 
 ---
 
 ## 11. Success criteria
 
-- Loads the eight-board stock and six openings from YAML or JSON and derives the 30-piece cut list
+- Loads the eight-board stock and **seven** openings from YAML or JSON and derives the **35**-piece cut list (section 20)
 - Handwritten `cuts:` files still load (`storm_window.craftsmanblog.yaml`)
 - Outputs an explicit **board → rip → cross-cut** sequence (through-cut, cross-cut-first, or gang-rip when those rules apply)
 - Accounts for kerf on rips and cross-cuts
 - Reports waste percentage, **windows completed**, and **unused stock**
 - Places every piece that fits this workflow, and **lists what cannot be done** (14/15 on the three-board fixture)
 - Two-window subset of the old list still places all 10 pieces
-- Live six-window list places all 30 pieces on boards a, b, d, e (board-c unused leftover)
+- Dining vs living 1/8" pairs share **rail length** (same glass width); living stiles are 1/16" fatter (section 20)
+- dining-side (40") is its own width class: 2 1/8" stiles, 35 1/2" rails
+- Live packing of 35 pieces / 7 windows on boards a–e (board-c used; leftover f, g, h)
 - Can write a `.md` shop report that shows, for each used board, where every cut sits on the face
 - Can write a single **PDF** with those instructions and graphics, suitable to print or open without a Markdown preview
 - PDF lists each window’s opening and derived cuts (length, width, quantity) with mixed numbers and a `"` inch mark in a single cell per measurement
+- PDF lists used stock dimensions after the window tables, then assembled frames and two glass lites per opening (section 21)
 - When every piece on a board is the same length, shop instructions **cross-cut that length first**, then rip, so leftover is a full-width offcut
 - When adjacent strips hold only same-length parts, **rip them as one blank**, cross-cut, then rip apart, so leftover is a wider offcut
-- From opening height/width, compute stile and rail **lengths** (1/4" expansion; rails between stiles) and feed the packer
+- From opening height/width, compute stile and rail **lengths** (1/4" expansion; rails between stiles) and **widths** (section 20 glass class)
 - On 12' and 10' boards, **do not rip the full board** when leftover length can hold the remaining parts: through cross-cut first, then rip the shorter blanks (section 18)
 
 ---
@@ -482,10 +485,11 @@ uv run lumber optimize examples/storm_window.yaml --format markdown -o storm_win
 # Lumber cut plan
 
 Kerf: 1/8"
-Placed: 30 pieces
+Placed: 35 pieces
 Waste: …
-Windows completed: 6 of 6
-Unused stock: board-c, board-f, board-g, board-h
+Windows completed: 7 of 7
+Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
+Unused stock: board-f, board-g, board-h
 
 ## board-a — 7 3/8" × 1" × 144"
 
@@ -543,8 +547,10 @@ One file, e.g. `storm_window.pdf`, that contains:
 
 1. Title, kerf, placed count, waste, **windows completed** (when cuts have window ids), **unused stock**
 2. **Cuts by window** (when openings were used): one table per window, two-up on the page
-3. For each used board: a **drawn face diagram** (same geometry as today’s SVG) and the rip / cross-cut list
-4. An **Unplaced** section with `INSUFFICIENT STOCK` when pieces do not fit
+3. **Stock used**: each board that received cuts, with `W × 1" × L` (YAML stock order). Handwritten jobs get this after the summary.
+4. For each used board: a **drawn face diagram** (same geometry as today’s SVG) and the rip / cross-cut list
+5. An **Unplaced** section with `INSUFFICIENT STOCK` when pieces do not fit
+6. **Assembled frames** (when openings were used): one face drawing per window plus the two glass lites (section 21)
 
 Open in any PDF viewer, print, or take to the shop. No Markdown preview required.
 
@@ -563,11 +569,11 @@ uv run lumber optimize examples/storm_window.yaml --format pdf -o storm_window.p
 ```
 Lumber cut plan
 Kerf: 1/8"
-Placed: 30 pieces
+Placed: 35 pieces
 Waste: …
-Windows completed: 6 of 6
-Complete: dining-east, dining-middle, …
-Unused stock: board-c, board-f, board-g, board-h
+Windows completed: 7 of 7
+Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
+Unused stock: board-f, board-g, board-h
 
 Cuts by window
   dining-west          dining-middle
@@ -575,6 +581,11 @@ Cuts by window
   Width   20 7/8"           Width   41 7/8"
   Stiles  62 1/4"  2 1/8"  2
   Top Rail 16 3/8"  2 1/8"  1
+  …
+
+Stock used
+  board-a  7 3/8" × 1" × 144"
+  board-b  7" × 1" × 144"
   …
 
 board-a — 7 3/8" × 1" × 144"
@@ -587,6 +598,14 @@ board-d — 7 1/4" × 1" × 120"
   Sequence: through cross-cut (shorten long rips)
   Leftover blank: 57 5/8" x 7 1/4"
   …
+
+Assembled frames
+  Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS
+  dining-west          dining-middle
+  [ face drawing ]     [ face drawing ]
+  Outer 20 5/8" × 62 1/4"
+  Upper glass 16 7/8" × 28 5/8"
+  Lower glass 16 7/8" × 27 3/4"
 ```
 
 - One board per page when the diagram + cut list would overflow; otherwise pack multiple boards on a page if they fit
@@ -595,7 +614,7 @@ board-d — 7 1/4" × 1" × 120"
 
 ### Cuts by window
 
-When the problem was loaded from `windows:` (cuts carry `window_id`), the PDF inserts a **Cuts by window** block after the summary and before the board diagrams. Handwritten `cuts:` files skip this block.
+When the problem was loaded from `windows:` (cuts carry `window_id`), the PDF inserts a **Cuts by window** block after the summary and before **Stock used**. Handwritten `cuts:` files skip the window tables and assembled frames; they still list **Stock used**.
 
 Each window is a small grid:
 
@@ -630,7 +649,7 @@ Do **not** shell out to a browser or require a system PDF printer.
 - Reuse `lumber.diagram.board_regions` for piece / kerf / waste rectangles; map inches to page points with a max diagram width (~7.5" on letter)
 - CLI: `--format pdf`; error if `-o` is missing
 - `uv add reportlab` (runtime dependency, not only dev)
-- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; the live six-window PDF contains `Windows completed: 6 of 6`, unused stock (including board-c), `Cuts by window`, dining-west, and mixed numbers with inch marks such as `62 1/2"` / `16 3/8"` / `2 1/8"`; handwritten-cut PDFs omit the window tables; `window_cut_tables` groups the live six openings in file order
+- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; after section 20 the live PDF contains `Windows completed: 7 of 7`, dining-side, unused stock, `Cuts by window`, dining-west, `16 3/8"` / `2 1/8"` / `2 3/16"`; after section 21 it also contains `Stock used`, board-a dimensions, `Assembled frames`, dining-west glass `16 7/8"` / `27 3/4"` / `28 5/8"`; handwritten-cut PDFs omit the window tables and assembled frames but list Stock used; `window_cut_tables` is file order (seven openings)
 
 ### Out of scope for this item
 
@@ -722,19 +741,20 @@ The diagram should show the pair as one 3 1/2" band through 62 1/4", then the sp
 
 ## 16. Storm window cuts from opening measurements
 
-**Status:** implemented. The packer still consumes a flat cut list. `load_problem` **writes that cut list** from window openings plus stile/rail widths.
+**Status:** implemented. Glass-class member widths are section 20. The packer still consumes a flat cut list; `load_problem` writes that list from openings plus per-window stile/rail widths.
 
 Cuts are named with the window id (`dining-west Stiles`). `CutPiece.window_id` is preserved through expand/pack so the shop report can count complete frames.
 
 ### Openings (from the house)
 
-All six frames are **62 1/2" high**. Dining west/east match each other; living west/east match each other. Dining and living widths differ by **1/8"**, so they are not the same cut.
+All **seven** frames are **62 1/2" high**. Dining west/east match each other; living west/east match each other; those two pairs differ by **1/8"** in width (glass class, section 20). Dining middle and living middle likewise. **dining-side** (dining room side window) is **40"** — not 1/8" from 41 7/8" or 42", so it is its own class.
 
 | Window | Height | Width | Meeting (sill to meeting rail) |
 |--------|--------|-------|--------------------------------|
 | Dining west | 62 1/2 | 20 7/8 | 31 1/2 |
 | Dining middle | 62 1/2 | 41 7/8 | 31 1/2 |
 | Dining east | 62 1/2 | 20 7/8 | 31 1/2 |
+| Dining side | 62 1/2 | 40 | 32 3/4 |
 | Living west | 62 1/2 | 21 | 32 |
 | Living middle | 62 1/2 | 42 | 32 |
 | Living east | 62 1/2 | 21 | 32 |
@@ -745,14 +765,16 @@ All six frames are **62 1/2" high**. Dining west/east match each other; living w
 
 Ripped widths in `examples/storm_window.yaml` / `.json`:
 
-| Part | Live width | Per window | Historical 2 1/2" list | Original 1 11/16" list |
-|------|------------|------------|------------------------|------------------------|
-| Stile | **2 1/8"** | 2 | 2 1/2 | 1 11/16 |
-| Top rail | **2 1/8"** | 1 | 2 1/2 | 1 11/16 |
-| Meeting rail | 1 1/4 | 1 | 1 1/4 | 1 1/4 |
-| Bottom rail | 3 1/2 | 1 | 3 1/2 | 2 9/16 |
+| Part | Base width (`parts:`) | Per window | Notes |
+|------|------------------------|------------|--------|
+| Stile | **2 1/8"** | 2 | Living 21" / 42" stiles **2 3/16"** (section 20) |
+| Top rail | **2 1/8"** | 1 | +1/16" only if height class (none live) |
+| Meeting rail | 1 1/4 | 1 | Width never fattened for 1/8" class |
+| Bottom rail | 3 1/2 | 1 | +1/16" only if height class (none live) |
 
-Six windows → **12 stiles + 18 rails = 30 pieces**. Cut names: `{window-id} Stiles` / `Top Rail` / `Meeting rail` / `Bottom rail` (that capitalization). Each expanded instance is `{name} #n`.
+Historical fixtures: 2 1/2" / 1 11/16" stile lists still used in formula tests.
+
+Seven windows → **14 stiles + 21 rails = 35 pieces**. Cut names: `{window-id} Stiles` / `Top Rail` / `Meeting rail` / `Bottom rail`. Each expanded instance is `{name} #n`. YAML id for the side window is `dining-side`.
 
 ### Assembly and expansion
 
@@ -769,22 +791,25 @@ If rails were cut to `opening_width − 1/4"` (full frame width), the assembled 
 
 ### Worked cut list
 
-`stile_length = 62 1/2 − 1/4 = 62 1/4"` for every window.
+`stile_length = 62 1/2 − 1/4 = 62 1/4"` for every window (all the same height).
 
-**Live (2 1/8" stiles):** `rail_length = width − 4 1/2"` because `1/4 + 2 × 2 1/8 = 4 1/2`.
+**Base 2 1/8" stiles** (smaller width in the class): `rail_length = width − 4 1/2"` because `1/4 + 2 × 2 1/8 = 4 1/2`.
 
-| Group | Windows | Stile L × W | Rail L | Top 2 1/8 | Meeting 1 1/4 | Bottom 3 1/2 |
-|-------|---------|-------------|--------|-----------|---------------|--------------|
-| Dining W+E | 2 | 62 1/4 × 2 1/8 (4) | 16 3/8 | 2 | 2 | 2 |
-| Living W+E | 2 | 62 1/4 × 2 1/8 (4) | 16 1/2 | 2 | 2 | 2 |
-| Dining middle | 1 | 62 1/4 × 2 1/8 (2) | 37 3/8 | 1 | 1 | 1 |
-| Living middle | 1 | 62 1/4 × 2 1/8 (2) | 37 1/2 | 1 | 1 | 1 |
+**Living 1/8" wider:** stiles **2 3/16"**; rails match dining (`1/4 + 2 × 2 3/16 = 4 5/8"`, so `21 − 4 5/8 = 16 3/8"`).
 
-Stiles collapse to one line: **12** @ 62 1/4" × 2 1/8".
+| Group | Windows | Stile L × W | Rail L | Top | Meeting 1 1/4 | Bottom 3 1/2 |
+|-------|---------|-------------|--------|-----|---------------|--------------|
+| Dining W+E | 2 | 62 1/4 × 2 1/8 (4) | 16 3/8 | 2 1/8 | 2 | 2 |
+| Living W+E | 2 | 62 1/4 × 2 3/16 (4) | 16 3/8 | 2 1/8 | 2 | 2 |
+| Dining middle | 1 | 62 1/4 × 2 1/8 (2) | 37 3/8 | 2 1/8 | 1 | 1 |
+| Living middle | 1 | 62 1/4 × 2 3/16 (2) | 37 3/8 | 2 1/8 | 1 | 1 |
+| Dining side | 1 | 62 1/4 × 2 1/8 (2) | 35 1/2 | 2 1/8 | 1 | 1 |
 
-Finished frame check, dining west: `2 × 2 1/8 + 16 3/8 = 20 5/8"`, which is `20 7/8 − 1/4`. Height `62 1/4"` is `62 1/2 − 1/4`.
+Stiles: **10** @ 2 1/8" + **6** @ 2 3/16" (all 62 1/4" long).
 
-**Formula tests (2 1/2" stiles)** still pin dining west rails at 15 5/8" and living middle at 36 3/4" (`rail_length = width − 5 1/4"`). That is not the live YAML.
+Finished frame check, dining west: `2 × 2 1/8 + 16 3/8 = 20 5/8"` = `20 7/8 − 1/4`. Living west: `2 × 2 3/16 + 16 3/8 = 21 3/4"` = `21 − 1/4`. dining-side: `2 × 2 1/8 + 35 1/2 = 39 3/4"` = `40 − 1/4`.
+
+**Formula tests (2 1/2" stiles, no glass class)** still pin dining west rails at 15 5/8" and living middle at 36 3/4". That is not the live YAML.
 
 ### Input shape
 
@@ -808,25 +833,23 @@ windows:
 
 ### Implementation notes
 
-- `lumber/windows.py`: `stile_length`, `rail_length`, `cuts_from_windows`
-- Live example: `examples/storm_window.yaml` and `.json` (six openings, eight boards)
-- Tests: formula dining west 15 5/8" rails with 2 1/2" stiles; live file dining west 16 3/8" with 2 1/8"; living middle 37 1/2" live / 36 3/4" at 2 1/2"; 30 pieces; original 1 11/16" stiles still yield 17 1/4" / 38 1/4"; handwritten cut list still loads
+- `lumber/windows.py`: `stile_length`, `rail_length`, `cuts_from_windows`, `member_widths_for_windows`
+- Live example: `examples/storm_window.yaml` and `.json` (seven openings, eight boards)
+- Tests: formula dining west 15 5/8" rails with 2 1/2" stiles; live dining west 16 3/8" with 2 1/8"; living west rails **equal** dining west; living stiles 2 3/16"; dining-side 35 1/2"; 35 pieces; original 1 11/16" stiles still yield 17 1/4" / 38 1/4"; handwritten cut list still loads
 
 ### Live packing result
 
-With the eight-board stock, per-length packing (section 17), and 10'/12' through-cuts (section 18): **30 of 30 placed**, **6 of 6 windows complete**, ~30% waste on used boards. Unused leftover: board-c, board-f, board-g, board-h.
+With the eight-board stock, per-length packing (section 17), 10'/12' through-cuts (section 18), and glass-class widths (section 20): **35 of 35 placed**, **7 of 7 windows complete**, ~34% waste on used boards. Unused leftover: board-f, board-g, board-h. board-c is used.
 
-Shop reports (text, markdown, PDF) print:
+Shop reports print:
 
 ```
-Windows completed: 6 of 6
-Complete: dining-east, dining-middle, dining-west, living-east, living-middle, living-west
-Unused stock: board-c, board-f, board-g, board-h
+Windows completed: 7 of 7
+Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
+Unused stock: board-f, board-g, board-h
 ```
 
-The **PDF** also prints **Cuts by window** (section 13): opening height/width and the derived part list, mixed numbers with a `"` suffix in one cell. Text and markdown do not.
-
-A window is complete only when every planned piece for that opening is placed (2 stiles + top + meeting + bottom).
+The **PDF** also prints **Cuts by window** (section 13) in file order (includes dining-side).
 
 ### What does not change
 
@@ -836,19 +859,19 @@ A window is complete only when every planned piece for that opening is placed (2
 
 ### Out of scope for this item
 
-- Glass / glazing sizes from meeting height
-- Changing stile or rail **widths**
 - Mortise-and-tenon extra length on rails
-- Treating dining 20 7/8" and living 21" as the same cut
+- Fattening meeting-rail **width** for a 1/8" class (stiles for width; top/bottom rails for height)
+
+Stile/rail **width** by opening class is section 20, not this item.
 
 ### Tests
 
-- Dining west rail length is `15 5/8"` with 2 1/2" stiles (formula fixture); live YAML rails are `16 3/8"` at 2 1/8"; stile length `62 1/4"`
-- Living middle rail length is `36 3/4"` at 2 1/2" and `37 1/2"` at live 2 1/8"
-- Six windows produce 30 pieces
+- Dining west rail length is `15 5/8"` with 2 1/2" stiles (formula fixture); live YAML dining west rails are `16 3/8"` at 2 1/8"; stile length `62 1/4"`
+- Living west/east rails match dining west (`16 3/8"`) with 2 3/16" stiles; middles both `37 3/8"`; dining-side rails `35 1/2"`
+- Seven windows produce 35 pieces
 - Reverse of the original 1 11/16" widths still yields 17 1/4" / 38 1/4" dining rails
 - Existing handwritten cut-list problems still load
-- Live example: 30 pieces, 6 of 6 windows complete; PDF contains `Windows completed`
+- Live example: 35 pieces, 7 of 7 windows complete (after section 20); PDF contains `Windows completed` and dining-side
 
 ---
 
@@ -878,13 +901,13 @@ So 12' boards get paired stiles; leftover stiles become one-per-strip on 10' boa
 Used boards are drawn as before. Boards with no placements are **not** drawn; they are listed:
 
 ```
-Unused stock: board-c, board-f, board-g, board-h
+Unused stock: board-f, board-g, board-h
 ```
 
 ### Tests
 
 - Four 62 1/4" × 2 1/2" stiles: two on a 2 1/2" × 144" board, two on a 5 1/8" × 120" board; none unplaced
-- Live storm-window optimize uses board-d and board-e (10' through-cut); board-c stays unused leftover
+- Live storm-window optimize uses board-c, board-d, and board-e (10' through-cut); leftover is board-f, g, h
 - Three-board craftsmanblog fixture still 14/15 (same-length 8' stock; behavior unchanged)
 
 ---
@@ -934,7 +957,7 @@ Board: 6 1/8" x 1" x 120" (board-e)
     Rip 3 1/2" / 2 1/8" -> remaining rails
 ```
 
-board-d is the same 10' pattern. board-c (8 3/8" × 10') stays **unused**. The craftsmanblog 8' fixture is unchanged (14/15, gang-rip on board-b).
+board-d is the same 10' pattern. After section 20, board-c (8 3/8" × 10') is **used** the same way (station + remnant). The craftsmanblog 8' fixture is unchanged (14/15, gang-rip on board-b).
 
 ### Rule
 
@@ -952,7 +975,7 @@ Station pack order: (1) long parts onto station blanks, (2) short parts onto rem
 
 ### What does not change
 
-- Six windows still complete from current stock (30/30)
+- Seven windows still complete from current stock (35/35)
 - Kerf, expansion
 - Sections 14–15 on 8' boards that are already all one length or gang-rippable
 - Recovering the 15th piece on the three 8' boards (still out of scope)
@@ -961,8 +984,125 @@ Station pack order: (1) long parts onto station blanks, (2) short parts onto rem
 
 - board-a (live): through cross-cut / 19 1/4" leftover
 - board-d and board-e: through cross-cut / 57 5/8" leftover; remnant parts fit that leftover
-- board-c unused; waste on used boards under 35%
+- board-c used (through-cut); leftover board-f, g, h; waste on used boards ~34%
 - 8' `station_plan` still None; craftsmanblog still 14/15
+
+---
+
+## 20. Uniform glass class for 1/8" opening pairs
+
+**Status:** implemented. The rabbetted lip (glass rebate) is the **same** for openings that differ by only 1/8". That 1/8" of finished frame goes into the wood, not into a second glass size.
+
+Teaching example: 21 7/8" vs 22" wide — the **wider** window’s stiles are each **1/16" fatter** (1/8" total), so **rail length matches**. Live openings stay 20 7/8"/21" and 41 7/8"/42"; the same 1/16" split applies. dining-side (40") is **not** in those classes.
+
+### Rule
+
+When two openings differ by **1/8"** on an axis, that 1/8" of finished frame (`opening − expansion`) is absorbed in the **two members on that axis** (1/16" each) on the **larger** opening. Extra wood is on the **outer** edge; rabbet depth is unchanged and is **not** a YAML field. `parts:` widths are the **smaller** opening in the class.
+
+- **Width +1/8":** each stile of the wider window is `parts.stile + 1/16"`. Rail **length** equals the narrower window. Meeting-rail **width** is unchanged.
+- **Height +1/8":** top and bottom rails of the taller window are each `parts.* + 1/16"`. Meeting-rail width unchanged. Stile **length** is still `height − expansion` (already 1/8" longer). Live heights are all 62 1/2" — no height split yet.
+- **Classes:** connected groups whose widths (or heights) differ by **0 or exactly 1/8"**. Other gaps are separate classes (base `parts:` widths).
+
+Live width classes:
+
+| Class | Openings | Stile width | Common rail length |
+|-------|----------|-------------|--------------------|
+| Narrow | dining-west, dining-east (20 7/8"); living-west, living-east (21") | 2 1/8" dining; **2 3/16"** living | 16 3/8" |
+| Wide | dining-middle (41 7/8"); living-middle (42") | 2 1/8" dining; **2 3/16"** living | 37 3/8" |
+| Side | dining-side (40") | 2 1/8" | 35 1/2" |
+
+`40"` vs `41 7/8"` is 1 7/8"; vs `42"` is 2". dining-side does not join the middle class.
+
+Worked checks (expansion 1/4"):
+
+```
+dining W/E:  20 7/8 − 1/4 − 2 × 2 1/8  = 16 3/8"
+living W/E:  21     − 1/4 − 2 × 2 3/16 = 16 3/8"
+dining mid:  41 7/8 − 1/4 − 2 × 2 1/8  = 37 3/8"
+living mid:  42     − 1/4 − 2 × 2 3/16 = 37 3/8"
+dining-side: 40     − 1/4 − 2 × 2 1/8  = 35 1/2"
+```
+
+### dining-side
+
+Add to `examples/storm_window.yaml` / `.json` with the dining group (after dining-east is fine):
+
+```yaml
+  - id: dining-side
+    height: "62 1/2"
+    width: "40"
+    meeting: "32 3/4"
+```
+
+Meeting 32 3/4" is stored for glazing; it does not change lumber. Seven windows → **35 pieces**. PDF “Cuts by window” includes this table. Completeness **7 of 7**. Live packing uses board-c; leftover is board-f, g, h.
+
+### Implementation notes
+
+- After parsing all `windows:`, cluster by width and by height (edge if difference is 0 or 1/8").
+- Per window: stile width = `parts.stile` if width is the class minimum, else `parts.stile + 1/16"` when the class range is 1/8". Same for top/bottom rail vs height. Meeting rail width always `parts.meeting_rail`.
+- `cuts_for_window` uses that window’s stile width in `rail_length` and on the stile `CutPiece`s.
+- Tests: living west rails = dining west; living stiles 2 3/16"; both middles 37 3/8"; dining-side 35 1/2" and 5 pieces; 35 expanded cuts; PDF lists dining-side; packing assertions updated from the run.
+- Do not change handwritten `cuts:` files. Base YAML `parts.stile` stays `2 1/8"`.
+
+### What does not change
+
+- Expansion 1/4", kerf, joinery (rails between stiles)
+- Meeting height still unused for lumber
+- 8' craftsmanblog fixture
+- Through-cut station geometry (section 18)
+
+### Out of scope
+
+- Auto-classing gaps other than 1/8" (e.g. 1/4")
+- Rabbet depth as an input
+- Changing glass / meeting-rail **length** independently of rail_length
+
+---
+
+## 21. PDF stock used, assembled frames, and glass
+
+**Status:** implemented. PDF-only. Packing and YAML schema are unchanged. Rabbet is a fixed **1/4" wide × 3/8" deep** (face overlap × depth into the 1" thickness), not a YAML field. Glass is **1/8" double-strength**. The meeting rail has a rabbet on **both** faces so it holds the upper and lower lights. Only the **1/4" face** changes glass L×W; 3/8" depth is for glazing compound and is printed on the note.
+
+### Report order
+
+1. Summary (unchanged)
+2. Cuts by window (windows jobs only)
+3. **Stock used** — each used board id and `W × 1" × L` in YAML stock order (`CutPlan.used_stock`). Handwritten jobs get this after the summary. Leftover boards stay on the unused-stock summary line, not in this list.
+4. Per-board diagrams and cut lists
+5. Unplaced / `INSUFFICIENT STOCK` when needed
+6. **Assembled frames** (windows jobs only) — one face drawing per opening, file order, with glass sizes
+
+### Glass and frame geometry
+
+Derive sizes from the opening plus the same per-window member widths already used for lumber (section 20). Reconstruct expansion as `opening.height − stile_length`. Do not change packing.
+
+- Outer frame: `(width − expansion) × (height − expansion)`
+- Glass **width** (both lights): `rail_length + 2 × 1/4"`
+- Expansion clearance is **1/8" below and 1/8" above** the frame (`expansion / 2`). `windows[].meeting` is sill to the **centerline** of the meeting rail.
+- Meeting center in the frame: `meeting − expansion/2`
+- Lower daylight: from the top of the bottom rail to the bottom of the meeting rail
+- Upper daylight: from the top of the meeting rail to the bottom of the top rail
+- Each glass **height**: daylight + `2 × 1/4"` (into the 1/4" face of the rail rabbets)
+
+Worked check, dining-west (2 1/8" stiles, meeting 31 1/2"): outer 20 5/8" × 62 1/4"; glass width 16 7/8"; lower glass 27 3/4"; upper glass 28 5/8". Living-west keeps the same glass **width**; heights differ because meeting is 32". Dining vs living still share glass width (section 20). Meeting rail 1 1/4" minus two 1/4" face rabbets leaves 3/4" of wood.
+
+If `meeting` is missing, draw the frame and skip the glass list.
+
+Note on the frame page: `Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS`.
+
+### What does not change
+
+- Packer assignments, kerf, expansion, YAML `parts:` / `windows:`
+- Text / JSON / markdown reports
+- Handwritten `cuts:` jobs (no assembled frames)
+- Rabbet is not a YAML field
+
+### Tests
+
+- `used_stock_rows`: live a–e in file order, not f/g/h; craftsmanblog lists used boards
+- dining-west glass 16 7/8" × 28 5/8" upper / 27 3/4" lower; living-west same width, different heights
+- Live PDF contains `Stock used`, board-a `7 3/8"`, `Assembled frames`, dining-side, glass labels
+- Handwritten PDF has `Stock used` and omits `Assembled frames` / window tables
 
 ---
 
@@ -977,12 +1117,12 @@ Station pack order: (1) long parts onto station blanks, (2) short parts onto rem
 | Inches | `fractions.Fraction`; parse mixed numbers / decimals / quotes; format mixed numbers (default 16ths) with optional `"` |
 | Models | `StockPiece`, `CutPiece` (`window_id`, `instance_id`), `Placement` (`rip_offset`, `length_offset`), `Problem` / `CutPlan` (including `windows` and `board_layouts`), `WindowOpening`, `CutMode`, `StationPlan`, `BoardLayout` |
 | Loader | YAML or JSON; `kerf` default 1/8"; `windows` xor `cuts`; `parts.*.width`; expansion default 1/4" |
-| Windows | `stile_length` / `rail_length` formulas; 2 stiles + 3 rails per opening; labels above; `window_cut_tables` in file order, grouped by (name, L, W) |
+| Windows | `stile_length` / `rail_length`; 2 stiles + 3 rails per opening; 1/8" class fattening (section 20); labels; `window_cut_tables` in file order; `frame_assemblies` glass from meeting + 1/4" face rabbet |
 | Packer | Length-class greedy (section 5); strip pack longest-first / tightest remnant; widest-strip / tightest-width assignment; station blanks (section 18); waste on **used** boards only |
 | Sequence | Four modes (section 7 BoardLayout); gang combined width = last rip offset + width − first rip offset |
-| Reports | Text / JSON / markdown+SVG / PDF; windows completed; unused stock; PDF-only per-window tables; mixed number + `"` in one cell |
+| Reports | Text / JSON / markdown+SVG / PDF; windows completed; unused stock; PDF-only per-window tables, stock used list, assembled frames + glass (section 21); mixed number + `"` in one cell |
 | CLI | `lumber optimize`; `--format`, `-o`, `--kerf`; suffix inference; PDF requires `-o`; exit 1 if unplaced |
-| Tests | The suite in `tests/` is the oracle. Live: 30/30, 6/6, unused board-c, through-cut 12'/10', waste < 35%. Fixture: 14/15, gang-rip board-b, cross-cut-first board-c |
+| Tests | The suite in `tests/` is the oracle. Live (after section 20): 35 pieces, 7 windows, dining/living rail lengths equal, dining-side 35 1/2", living stiles 2 3/16". Packing/unused-stock from the post-implement run. Fixture: 14/15, gang-rip board-b, cross-cut-first board-c |
 
 ### Not specified (may differ)
 
@@ -996,8 +1136,9 @@ Station pack order: (1) long parts onto station blanks, (2) short parts onto rem
 
 A regenerate from the plan **alone** (without reading tests or examples) would still risk:
 
-- Getting live stile width wrong if it followed the old 2 1/2" narrative (now corrected here; live file is 2 1/8")
-- Opening board-c for remnant strips (must only remnant-pack boards that already took a station piece)
+- Applying equal 2 1/8" stiles to living 21" / 42" (section 20: those stiles are 2 3/16" so rails match dining)
+- Omitting dining-side (40", 35 1/2" rails) from the live seven-window list
+- Opening leftover 10' stock for remnant strips only (must only remnant-pack boards that already took a station piece)
 - Applying through-cut to 8' stock (`count == 1` is allowed only at ≥ 10')
 - Putting window tables in text/markdown (PDF only)
 - Splitting mixed numbers across PDF cells

@@ -1,7 +1,8 @@
 """PDF shop report: cut instructions and board-face diagrams.
 
 Letter-size cutsheet: summary, per-window cut tables (when openings were
-used), a face diagram of each used board, and the rip / cross-cut list.
+used), used-stock dimensions, a face diagram of each used board, the rip /
+cross-cut list, and assembled frames with glass sizes.
 """
 
 from __future__ import annotations
@@ -19,8 +20,14 @@ from lumber.models import BoardLayout, CutPlan, Placement, StockPiece
 from lumber.report import group_by_board, unused_stock_line
 from lumber.sequence import board_instructions
 from lumber.windows import (
+    FrameAssembly,
+    RABBET_DEPTH,
+    RABBET_FACE,
+    UsedStockRow,
     WindowCutRow,
     WindowCutTable,
+    frame_assemblies,
+    used_stock_rows,
     window_completion_lines,
     window_cut_tables,
 )
@@ -42,6 +49,15 @@ TABLE_QTY_W = 28
 TABLE_GAP = 16
 GRID = HexColor("#c8c8c8")
 TABLE_W = TABLE_NAME_W + TABLE_MEAS_W + TABLE_MEAS_W + TABLE_QTY_W
+WOOD = HexColor("#e8d5b0")
+GLASS_FILL = HexColor("#c5dff0")
+FRAME_DIAGRAM_MAX_H = 250
+FRAME_LEFT_DIM = 28
+FRAME_BOTTOM_DIM = 16
+FRAME_COL_GAP = 16
+RABBET_NOTE = (
+    f'Rabbet {format_inches(RABBET_FACE)}" wide × {format_inches(RABBET_DEPTH)}" deep; glass 1/8" DS'
+)
 
 
 def _inch_label(value: Fraction) -> str:
@@ -307,6 +323,191 @@ class _Pdf:
             self.y = top - height
         self.gap(8)
 
+    def draw_stock_used(self, rows: list[UsedStockRow]) -> None:
+        """List used boards and their W × 1" × L after the window tables."""
+        if not rows:
+            return
+        self.ensure(16 + LINE * len(rows) + 8)
+        self.text("Stock used", size=12, leading=16)
+        for row in rows:
+            extra = f"  ×{row.quantity}" if row.quantity != 1 else ""
+            self.text(
+                f'{row.id}  {_inch_label(row.width)} × 1" × {_inch_label(row.length)}{extra}'
+            )
+        self.gap(8)
+
+    def _frame_scale(self, frame: FrameAssembly, col_w: float) -> float:
+        """Points per inch so the frame face fits the column."""
+        max_w = max(col_w - FRAME_LEFT_DIM - 4, 40)
+        return min(max_w / float(frame.outer_width), FRAME_DIAGRAM_MAX_H / float(frame.outer_height))
+
+    def _frame_diagram_size(self, frame: FrameAssembly, col_w: float) -> tuple[float, float]:
+        scale = self._frame_scale(frame, col_w)
+        return float(frame.outer_width) * scale, float(frame.outer_height) * scale
+
+    def _frame_block_height(self, frame: FrameAssembly, col_w: float) -> float:
+        _w, diagram_h = self._frame_diagram_size(frame, col_w)
+        glass_lines = len(frame.glass)
+        return TABLE_TITLE + diagram_h + FRAME_BOTTOM_DIM + 14 * (1 + glass_lines) + 16
+
+    def _meeting_band(self, frame: FrameAssembly) -> tuple[Fraction, Fraction]:
+        """Meeting-rail bottom and top, inches from the outer bottom."""
+        if frame.glass:
+            lower = frame.glass[1]
+            lower_daylight = lower.height - 2 * RABBET_FACE
+            meeting_bottom = frame.bottom_rail + lower_daylight
+        else:
+            remaining = (
+                frame.outer_height
+                - frame.top_rail
+                - frame.bottom_rail
+                - frame.meeting_rail
+            )
+            meeting_bottom = frame.bottom_rail + remaining / 2
+        return meeting_bottom, meeting_bottom + frame.meeting_rail
+
+    def _draw_frame_face(
+        self,
+        left: float,
+        bottom: float,
+        frame: FrameAssembly,
+        scale: float,
+    ) -> None:
+        """Stiles full height; rails between; glass in the daylight openings."""
+        w = float(frame.outer_width) * scale
+        h = float(frame.outer_height) * scale
+        stile = float(frame.stile) * scale
+        top = float(frame.top_rail) * scale
+        bottom_rail = float(frame.bottom_rail) * scale
+        meeting_bottom_in, meeting_top_in = self._meeting_band(frame)
+        meeting_y = bottom + float(meeting_bottom_in) * scale
+        meeting_h = float(frame.meeting_rail) * scale
+        inner_w = w - 2 * stile
+
+        self.canvas.setFillColor(WOOD)
+        self.canvas.setStrokeColor(black)
+        self.canvas.setLineWidth(0.8)
+        self.canvas.rect(left, bottom, w, h, fill=1, stroke=1)
+
+        if frame.glass and inner_w > 1:
+            upper_bottom = meeting_y + meeting_h
+            upper_h = h - top - (upper_bottom - bottom)
+            lower_h = meeting_y - bottom - bottom_rail
+            self.canvas.setFillColor(GLASS_FILL)
+            self.canvas.setStrokeColor(HexColor("#8ab0c8"))
+            self.canvas.setLineWidth(0.4)
+            if upper_h > 1:
+                self.canvas.rect(left + stile, upper_bottom, inner_w, upper_h, fill=1, stroke=1)
+            if lower_h > 1:
+                self.canvas.rect(
+                    left + stile, bottom + bottom_rail, inner_w, lower_h, fill=1, stroke=1
+                )
+
+        self.canvas.setStrokeColor(black)
+        self.canvas.setLineWidth(0.6)
+        self.canvas.setFillColor(WOOD)
+        self.canvas.rect(left, bottom, stile, h, fill=1, stroke=1)
+        self.canvas.rect(left + w - stile, bottom, stile, h, fill=1, stroke=1)
+        self.canvas.rect(left + stile, bottom + h - top, inner_w, top, fill=1, stroke=1)
+        self.canvas.rect(left + stile, bottom, inner_w, bottom_rail, fill=1, stroke=1)
+        self.canvas.rect(left + stile, meeting_y, inner_w, meeting_h, fill=1, stroke=1)
+
+        self.canvas.setStrokeColor(black)
+        self.canvas.setLineWidth(1)
+        self.canvas.rect(left, bottom, w, h, fill=0, stroke=1)
+
+        self.canvas.setFillColor(black)
+        self.canvas.setFont("Helvetica", 6)
+        if inner_w >= 36:
+            if frame.glass:
+                upper, lower = frame.glass[0], frame.glass[1]
+                upper_bottom = meeting_y + meeting_h
+                upper_h = h - top - (upper_bottom - bottom)
+                lower_h = meeting_y - bottom - bottom_rail
+                if upper_h >= 10:
+                    self.canvas.drawCentredString(
+                        left + w / 2,
+                        upper_bottom + upper_h / 2 - 2,
+                        f'{_inch_label(upper.width)} × {_inch_label(upper.height)}',
+                    )
+                if lower_h >= 10:
+                    self.canvas.drawCentredString(
+                        left + w / 2,
+                        bottom + bottom_rail + lower_h / 2 - 2,
+                        f'{_inch_label(lower.width)} × {_inch_label(lower.height)}',
+                    )
+
+    def _draw_frame_block(self, left: float, top: float, frame: FrameAssembly, col_w: float) -> None:
+        """One assembled frame: heading, face drawing, outer size, glass list."""
+        scale = self._frame_scale(frame, col_w)
+        diagram_w, diagram_h = self._frame_diagram_size(frame, col_w)
+        self.canvas.setFillColor(black)
+        self.canvas.setFont("Helvetica-Bold", 9)
+        title_baseline = top - TABLE_TITLE
+        self.canvas.drawString(left, title_baseline, frame.window_id)
+
+        origin_x = left + FRAME_LEFT_DIM
+        origin_y = title_baseline - TABLE_TITLE_GAP - diagram_h
+        self._draw_frame_face(origin_x, origin_y, frame, scale)
+
+        self.canvas.setFillColor(black)
+        self.canvas.setFont("Helvetica", 7)
+        self.canvas.drawCentredString(
+            origin_x + diagram_w / 2,
+            origin_y - 10,
+            _inch_label(frame.outer_width),
+        )
+        self.canvas.saveState()
+        self.canvas.translate(left + 8, origin_y + diagram_h / 2)
+        self.canvas.rotate(90)
+        self.canvas.drawCentredString(0, 0, _inch_label(frame.outer_height))
+        self.canvas.restoreState()
+
+        y = origin_y - FRAME_BOTTOM_DIM - 2
+        self.canvas.setFont("Helvetica", 8)
+        self.canvas.drawString(
+            left,
+            y,
+            f'Outer {_inch_label(frame.outer_width)} × {_inch_label(frame.outer_height)}',
+        )
+        y -= 12
+        for lite in frame.glass:
+            self.canvas.drawString(
+                left,
+                y,
+                f'{lite.name} glass {_inch_label(lite.width)} × {_inch_label(lite.height)}',
+            )
+            y -= 12
+
+    def draw_assembled_frames(self, frames: list[FrameAssembly]) -> None:
+        """Face drawings of each storm frame plus glass sizes, two-up when they fit."""
+        if not frames:
+            return
+        self.text("Assembled frames", size=12, leading=16)
+        self.text(RABBET_NOTE, size=9, leading=12)
+        usable = PAGE_W - 2 * MARGIN
+        two_up = True
+        col_w = (usable - FRAME_COL_GAP) / 2 if two_up else usable
+        index = 0
+        while index < len(frames):
+            left_frame = frames[index]
+            right_frame = None
+            if two_up and index + 1 < len(frames):
+                right_frame = frames[index + 1]
+            height = self._frame_block_height(left_frame, col_w)
+            if right_frame is not None:
+                height = max(height, self._frame_block_height(right_frame, col_w))
+            self.ensure(height)
+            top = self.y
+            self._draw_frame_block(MARGIN, top, left_frame, col_w)
+            if right_frame is not None:
+                self._draw_frame_block(MARGIN + col_w + FRAME_COL_GAP, top, right_frame, col_w)
+                index += 2
+            else:
+                index += 1
+            self.y = top - height
+        self.gap(8)
+
     def save(self) -> None:
         self.canvas.save()
 
@@ -331,6 +532,7 @@ def write_pdf(plan: CutPlan, path: Path) -> None:
         doc.text(unused)
     doc.gap(8)
     doc.draw_window_tables(window_cut_tables(plan))
+    doc.draw_stock_used(used_stock_rows(plan))
 
     for stock_id in sorted(grouped):
         stock = stock_lookup[stock_id]
@@ -359,5 +561,7 @@ def write_pdf(plan: CutPlan, path: Path) -> None:
             doc.text(
                 f'  {label}: {format_inches(cut.length)}" x {format_inches(cut.width)}"'
             )
+
+    doc.draw_assembled_frames(frame_assemblies(plan))
 
     doc.save()

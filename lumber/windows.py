@@ -43,6 +43,72 @@ def rail_length(width: Fraction, expansion: Fraction, stile_width: Fraction) -> 
     return width - expansion - 2 * stile_width
 
 
+_EIGHTH = Fraction(1, 8)
+_SIXTEENTH = Fraction(1, 16)
+
+
+def _clusters(values: list[Fraction]) -> list[set[Fraction]]:
+    """Group sizes that differ by 0 or exactly 1/8"."""
+    unique = list(dict.fromkeys(values))
+    neighbors: dict[Fraction, list[Fraction]] = {value: [] for value in unique}
+    for index, left in enumerate(unique):
+        for right in unique[index + 1 :]:
+            if abs(left - right) == _EIGHTH:
+                neighbors[left].append(right)
+                neighbors[right].append(left)
+    seen: set[Fraction] = set()
+    groups: list[set[Fraction]] = []
+    for value in unique:
+        if value in seen:
+            continue
+        stack = [value]
+        group: set[Fraction] = set()
+        while stack:
+            node = stack.pop()
+            if node in seen:
+                continue
+            seen.add(node)
+            group.add(node)
+            stack.extend(neighbors[node])
+        groups.append(group)
+    return groups
+
+
+def _class_minimum(clusters: list[set[Fraction]], value: Fraction) -> Fraction:
+    for group in clusters:
+        if value in group:
+            return min(group)
+    return value
+
+
+def member_widths_for_windows(
+    windows: list[WindowOpening],
+    parts: StormParts,
+) -> dict[str, StormParts]:
+    """Base ``parts`` on the smaller opening; +1/16" on the larger in a 1/8" class."""
+    width_clusters = _clusters([window.width for window in windows])
+    height_clusters = _clusters([window.height for window in windows])
+    by_id: dict[str, StormParts] = {}
+    for window in windows:
+        width_min = _class_minimum(width_clusters, window.width)
+        height_min = _class_minimum(height_clusters, window.height)
+        stile = parts.stile
+        if window.width - width_min == _EIGHTH:
+            stile = parts.stile + _SIXTEENTH
+        top = parts.top_rail
+        bottom = parts.bottom_rail
+        if window.height - height_min == _EIGHTH:
+            top = parts.top_rail + _SIXTEENTH
+            bottom = parts.bottom_rail + _SIXTEENTH
+        by_id[window.id] = StormParts(
+            stile=stile,
+            top_rail=top,
+            meeting_rail=parts.meeting_rail,
+            bottom_rail=bottom,
+        )
+    return by_id
+
+
 def cuts_for_window(
     window: WindowOpening,
     parts: StormParts,
@@ -100,9 +166,10 @@ def cuts_from_windows(
     expansion: Fraction,
 ) -> list[CutPiece]:
     """Expand every opening into cut pieces, in file order."""
+    widths = member_widths_for_windows(windows, parts)
     cuts: list[CutPiece] = []
     for window in windows:
-        cuts.extend(cuts_for_window(window, parts, expansion))
+        cuts.extend(cuts_for_window(window, widths[window.id], expansion))
     return cuts
 
 
@@ -235,6 +302,137 @@ class WindowCutTable:
     height: Fraction | None
     width: Fraction | None
     parts: tuple[WindowCutRow, ...]
+
+
+@dataclass(frozen=True)
+class UsedStockRow:
+    """One used board on the PDF stock list: id and face dimensions."""
+    id: str
+    width: Fraction
+    length: Fraction
+    quantity: int
+
+
+@dataclass(frozen=True)
+class GlassLite:
+    """One glass pane: upper or lower, sized for the 1/4" face rabbet."""
+    name: str
+    width: Fraction
+    height: Fraction
+
+
+@dataclass(frozen=True)
+class FrameAssembly:
+    """Assembled storm frame: outer size, member widths, optional glass lites."""
+    window_id: str
+    outer_width: Fraction
+    outer_height: Fraction
+    stile: Fraction
+    top_rail: Fraction
+    meeting_rail: Fraction
+    bottom_rail: Fraction
+    glass: tuple[GlassLite, ...]
+
+
+RABBET_FACE = Fraction(1, 4)
+RABBET_DEPTH = Fraction(3, 8)
+
+
+def used_stock_rows(plan: CutPlan) -> list[UsedStockRow]:
+    """Boards that received cuts, in YAML stock order, with W × L."""
+    return [
+        UsedStockRow(
+            id=stock.id,
+            width=stock.width,
+            length=stock.length,
+            quantity=stock.quantity,
+        )
+        for stock in plan.used_stock
+    ]
+
+
+def _parts_by_name(table: WindowCutTable) -> dict[str, WindowCutRow]:
+    return {row.name: row for row in table.parts}
+
+
+def _glass_lites(
+    opening: WindowOpening,
+    expansion: Fraction,
+    outer_height: Fraction,
+    rail_len: Fraction,
+    top: Fraction,
+    meeting: Fraction,
+    bottom: Fraction,
+) -> tuple[GlassLite, ...]:
+    """Upper and lower lights; empty when meeting height is missing."""
+    if opening.meeting is None:
+        return ()
+    glass_width = rail_len + 2 * RABBET_FACE
+    meeting_center = opening.meeting - expansion / 2
+    meeting_bottom = meeting_center - meeting / 2
+    meeting_top = meeting_center + meeting / 2
+    lower_daylight = meeting_bottom - bottom
+    upper_daylight = outer_height - top - meeting_top
+    return (
+        GlassLite(
+            name="Upper",
+            width=glass_width,
+            height=upper_daylight + 2 * RABBET_FACE,
+        ),
+        GlassLite(
+            name="Lower",
+            width=glass_width,
+            height=lower_daylight + 2 * RABBET_FACE,
+        ),
+    )
+
+
+def frame_assemblies(plan: CutPlan) -> list[FrameAssembly]:
+    """Per-window outer frame and glass, in file order, from openings + cut tables."""
+    tables = {table.window_id: table for table in window_cut_tables(plan)}
+    if not tables:
+        return []
+    openings = {window.id: window for window in plan.windows}
+    order = [window.id for window in plan.windows]
+    for window_id in tables:
+        if window_id not in order:
+            order.append(window_id)
+
+    assemblies: list[FrameAssembly] = []
+    for window_id in order:
+        table = tables.get(window_id)
+        opening = openings.get(window_id)
+        if table is None or opening is None:
+            continue
+        parts = _parts_by_name(table)
+        stile = parts.get("Stiles")
+        top = parts.get("Top Rail")
+        meeting = parts.get("Meeting rail")
+        bottom = parts.get("Bottom rail")
+        if stile is None or top is None or meeting is None or bottom is None:
+            continue
+        expansion = opening.height - stile.length
+        assemblies.append(
+            FrameAssembly(
+                window_id=window_id,
+                outer_width=opening.width - expansion,
+                outer_height=stile.length,
+                stile=stile.width,
+                top_rail=top.width,
+                meeting_rail=meeting.width,
+                bottom_rail=bottom.width,
+                glass=_glass_lites(
+                    opening,
+                    expansion,
+                    stile.length,
+                    top.length,
+                    top.width,
+                    meeting.width,
+                    bottom.width,
+                ),
+            )
+        )
+    return assemblies
 
 
 _PART_RANK = {label: index for index, label in enumerate(_PART_LABELS.values())}

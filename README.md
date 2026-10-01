@@ -100,13 +100,13 @@ cuts:
 
 ## Examples
 
-**Live job:** `examples/storm_window.yaml` (same data in `.json`) — six openings (dining and living, west/middle/east) and eight boards (12', 10', and 8'). Stile and top-rail width is **2 1/8"**. That derives **30 pieces**; all place; **6 of 6** windows complete; waste about **30%** on used boards. Used: board-a, board-b, board-d, board-e. Unused leftover: board-c, board-f, board-g, board-h.
+**Live job:** `examples/storm_window.yaml` (same data in `.json`) — seven openings (dining west/middle/east/side + living west/middle/east) and eight boards (12', 10', and 8'). Base stile/top-rail width is **2 1/8"**; living 21" / 42" stiles are **2 3/16"** so rails match dining (1/8" glass class). That derives **35 pieces**; all place; **7 of 7** windows complete; waste about **34%** on used boards. Used: board-a through board-e. Unused leftover: board-f, board-g, board-h.
 
 **Shortage fixture:** `examples/storm_window.craftsmanblog.yaml` — three 8' boards and a handwritten 15-piece list. **14 of 15** place; the 38 1/4" top rail is unplaced. Tests for gang-rip, whole-board cross-cut-first, and `INSUFFICIENT STOCK` use this file.
 
 ## How it works
 
-1. Load the problem; if `windows` are listed, derive the cut list.
+1. Load the problem; if `windows` are listed, derive the cut list. Openings that differ by 1/8" share rail length: the larger opening gets 1/16" extra on each stile (or on top and bottom rails for height).
 2. Pack by stock **length** (longest boards first). Strips of one width are packed along the blank, then assigned widest-first with the tightest remaining width (kerf between rips and cross-cuts).
 3. On **12' and 10'** boards, through-cut 62 1/4" station blanks so rips are not full length (12': two stations + 19 1/4" leftover; 10': one station + 57 5/8" leftover). Small parts go in that leftover. **8'** stock stays rip-first / cross-cut-first / gang-rip.
 4. Write shop instructions for each used board:
@@ -114,7 +114,7 @@ cuts:
    - **Cross-cut first** when every piece on the board is the same length
    - **Gang-rip** when adjacent strips are same-length only
    - Otherwise **rip first**, then cross-cut
-5. Report waste on **used boards only**, which windows are complete, and which stock was leftover.
+5. Report waste on **used boards only**, which windows are complete, and which stock was leftover. The PDF also lists used-board dimensions after the window tables, then assembled frames with the two glass lites.
 
 Packing rules, formulas, and rebuild notes are in [`PLAN.md`](PLAN.md).
 

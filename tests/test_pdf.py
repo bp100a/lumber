@@ -54,11 +54,11 @@ def test_write_pdf_reports_windows_completed_from_stock(tmp_path: Path) -> None:
     write_pdf(plan, out)
     data = out.read_bytes()
     assert data.startswith(b"%PDF")
-    assert b"Windows completed: 6 of 6" in data
-    assert b"board-c" in data
+    assert b"Windows completed: 7 of 7" in data
     assert b"Unused stock:" in data
     assert b"Cuts by window" in data
     assert b"dining-west" in data
+    assert b"dining-side" in data
     assert b"Height" in data
     assert b"Width" in data
     assert b"Stiles" in data
@@ -68,6 +68,18 @@ def test_write_pdf_reports_windows_completed_from_stock(tmp_path: Path) -> None:
     assert b'62 1/4"' in data
     assert b'16 3/8"' in data
     assert b'2 1/8"' in data
+    assert b'2 3/16"' in data
+    assert b'35 1/2"' in data
+    assert b"Stock used" in data
+    assert b"board-a" in data
+    assert b'7 3/8"' in data
+    assert b"Assembled frames" in data
+    assert b"Upper glass" in data
+    assert b"Lower glass" in data
+    assert b'16 7/8"' in data
+    assert b'28 5/8"' in data
+    assert b'27 3/4"' in data
+    assert b"Rabbet" in data
 
 
 def test_write_pdf_omits_window_tables_for_handwritten_cuts(tmp_path: Path) -> None:
@@ -77,3 +89,5 @@ def test_write_pdf_omits_window_tables_for_handwritten_cuts(tmp_path: Path) -> N
     data = out.read_bytes()
     assert b"Cuts by window" not in data
     assert b"Height" not in data
+    assert b"Assembled frames" not in data
+    assert b"Stock used" in data

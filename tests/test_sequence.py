@@ -203,8 +203,8 @@ def test_live_ten_foot_boards_are_through_crosscut_not_full_rips() -> None:
         assert all(p.cut.length <= layout.station.remnant_length for p in remnant_parts)
 
 
-def test_live_skips_the_wide_ten_foot_board() -> None:
+def test_live_uses_ten_foot_stock_including_the_wide_board() -> None:
     plan = optimize(load_problem(LIVE))
     used = {p.stock_id for p in plan.placements}
-    assert "board-c" not in used
+    assert {"board-a", "board-b", "board-c", "board-d", "board-e"} <= used
     assert plan.unplaced == []

@@ -121,6 +121,16 @@ class CutPlan:
             return 0.0
         return float(self.waste_area / basis * 100)
 
+    @property
+    def used_board_feet(self) -> float:
+        """Used-board volume in board feet (1" thick: area / 144)."""
+        return float(self.used_stock_area / 144)
+
+    @property
+    def waste_board_feet(self) -> float:
+        """Waste volume in board feet on used boards (or all stock if nothing placed)."""
+        return float(self.waste_area / 144)
+
 
 @dataclass(frozen=True)
 class WindowOpening:

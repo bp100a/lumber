@@ -10,9 +10,11 @@ from lumber.windows import (
     StormParts,
     WindowOpening,
     cuts_from_windows,
+    frame_assemblies,
     rail_length,
     stile_length,
     summarize_window_completion,
+    used_stock_rows,
     window_completion_lines,
     window_cut_tables,
 )
@@ -56,10 +58,11 @@ def test_living_middle_rail_length() -> None:
     assert rail == parse_inches("36 3/4")
 
 
-def test_six_windows_produce_thirty_pieces() -> None:
+def test_seven_windows_produce_thirty_five_pieces() -> None:
     problem = load_problem(LIVE)
     pieces = expand_cuts(problem.cuts)
-    assert len(pieces) == 30
+    assert len(pieces) == 35
+    assert any(c.window_id == "dining-side" for c in problem.cuts)
 
 
 def test_original_stile_width_matches_first_cut_list() -> None:
@@ -131,18 +134,17 @@ def test_windows_and_cuts_together_are_rejected(tmp_path: Path) -> None:
         load_problem(path)
 
 
-def test_live_stock_completes_all_six_windows() -> None:
+def test_live_stock_completes_all_seven_windows() -> None:
     plan = optimize(load_problem(LIVE))
     summary = summarize_window_completion(plan)
     assert summary is not None
-    assert summary.total == 6
-    assert summary.completed == 6
+    assert summary.total == 7
+    assert summary.completed == 7
     assert plan.unplaced == []
     used = {p.stock_id for p in plan.placements}
-    assert {"board-a", "board-b", "board-d", "board-e"} <= used
-    assert "board-c" not in used
+    assert {"board-a", "board-b"} <= used
     lines = window_completion_lines(plan)
-    assert lines[0] == "Windows completed: 6 of 6"
+    assert lines[0] == "Windows completed: 7 of 7"
     assert plan.waste_percent < 35
 
 
@@ -153,6 +155,7 @@ def test_window_cut_tables_group_live_openings() -> None:
         "dining-west",
         "dining-middle",
         "dining-east",
+        "dining-side",
         "living-west",
         "living-middle",
         "living-east",
@@ -172,7 +175,17 @@ def test_window_cut_tables_group_live_openings() -> None:
     living_middle = next(t for t in tables if t.window_id == "living-middle")
     assert living_middle.width == parse_inches("42")
     rails = {row.name: row for row in living_middle.parts}
-    assert rails["Top Rail"].length == parse_inches("37 1/2")
+    assert rails["Top Rail"].length == parse_inches("37 3/8")
+    assert rails["Stiles"].width == parse_inches("2 3/16")
+    dining_side = next(t for t in tables if t.window_id == "dining-side")
+    side_parts = {row.name: row for row in dining_side.parts}
+    assert dining_side.width == parse_inches("40")
+    assert side_parts["Top Rail"].length == parse_inches("35 1/2")
+    assert side_parts["Stiles"].width == parse_inches("2 1/8")
+    living_west = next(t for t in tables if t.window_id == "living-west")
+    west_parts = {row.name: row for row in living_west.parts}
+    assert west_parts["Top Rail"].length == parse_inches("16 3/8")
+    assert west_parts["Stiles"].width == parse_inches("2 3/16")
 
 
 def test_handwritten_cuts_have_no_window_completion() -> None:
@@ -199,3 +212,58 @@ def test_live_twelve_foot_boards_park_small_rails_in_remnant() -> None:
         for piece in long_rails:
             assert piece.length_offset < remnant_start
             assert piece.cut.length > remnant_len
+
+
+def test_used_stock_rows_are_used_boards_in_file_order() -> None:
+    live = optimize(load_problem(LIVE))
+    rows = used_stock_rows(live)
+    assert [row.id for row in rows] == [
+        "board-a",
+        "board-b",
+        "board-c",
+        "board-d",
+        "board-e",
+    ]
+    assert rows[0].width == parse_inches("7 3/8")
+    assert rows[0].length == parse_inches("144")
+    assert "board-f" not in {row.id for row in rows}
+
+    fixture = optimize(load_problem(CRAFTSMANBLOG))
+    assert used_stock_rows(fixture)
+    assert all(row.id in {"board-a", "board-b", "board-c"} for row in used_stock_rows(fixture))
+
+
+def test_frame_assemblies_dining_west_glass_and_living_west_width() -> None:
+    plan = optimize(load_problem(LIVE))
+    frames = {frame.window_id: frame for frame in frame_assemblies(plan)}
+    assert list(frames) == [
+        "dining-west",
+        "dining-middle",
+        "dining-east",
+        "dining-side",
+        "living-west",
+        "living-middle",
+        "living-east",
+    ]
+    dining = frames["dining-west"]
+    assert dining.outer_width == parse_inches("20 5/8")
+    assert dining.outer_height == parse_inches("62 1/4")
+    assert dining.stile == parse_inches("2 1/8")
+    upper, lower = dining.glass
+    assert upper.name == "Upper"
+    assert lower.name == "Lower"
+    assert upper.width == parse_inches("16 3/4")
+    assert lower.width == parse_inches("16 3/4")
+    assert upper.height == parse_inches("28 1/2")
+    assert lower.height == parse_inches("27 5/8")
+
+    living = frames["living-west"]
+    assert living.stile == parse_inches("2 3/16")
+    assert living.glass[0].width == dining.glass[0].width
+    assert living.glass[0].height != dining.glass[0].height
+    assert living.glass[1].height != dining.glass[1].height
+
+
+def test_handwritten_cuts_have_no_frame_assemblies() -> None:
+    plan = optimize(load_problem(CRAFTSMANBLOG))
+    assert frame_assemblies(plan) == []

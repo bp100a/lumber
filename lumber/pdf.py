@@ -17,10 +17,16 @@ from reportlab.pdfgen import canvas
 from lumber.diagram import board_regions, fill_for
 from lumber.dimensions import format_inches
 from lumber.models import BoardLayout, CutPlan, Placement, StockPiece
-from lumber.report import group_by_board, unused_stock_line
+from lumber.report import (
+    format_stock_dims,
+    group_by_board,
+    summary_volume_lines,
+    unused_stock_line,
+)
 from lumber.sequence import board_instructions
 from lumber.windows import (
     FrameAssembly,
+    GLASS_CLEARANCE,
     RABBET_DEPTH,
     RABBET_FACE,
     UsedStockRow,
@@ -56,7 +62,8 @@ FRAME_LEFT_DIM = 28
 FRAME_BOTTOM_DIM = 16
 FRAME_COL_GAP = 16
 RABBET_NOTE = (
-    f'Rabbet {format_inches(RABBET_FACE)}" wide × {format_inches(RABBET_DEPTH)}" deep; glass 1/8" DS'
+    f'Rabbet {format_inches(RABBET_FACE)}" wide × {format_inches(RABBET_DEPTH)}" deep; '
+    f'glass 1/8" DS, {format_inches(GLASS_CLEARANCE)}" per side'
 )
 
 
@@ -324,16 +331,14 @@ class _Pdf:
         self.gap(8)
 
     def draw_stock_used(self, rows: list[UsedStockRow]) -> None:
-        """List used boards and their W × 1" × L after the window tables."""
+        """List used boards with largest face dim first, 1\" last."""
         if not rows:
             return
         self.ensure(16 + LINE * len(rows) + 8)
         self.text("Stock used", size=12, leading=16)
         for row in rows:
             extra = f"  ×{row.quantity}" if row.quantity != 1 else ""
-            self.text(
-                f'{row.id}  {_inch_label(row.width)} × 1" × {_inch_label(row.length)}{extra}'
-            )
+            self.text(f"{row.id}  {format_stock_dims(row.width, row.length)}{extra}")
         self.gap(8)
 
     def _frame_scale(self, frame: FrameAssembly, col_w: float) -> float:
@@ -354,7 +359,7 @@ class _Pdf:
         """Meeting-rail bottom and top, inches from the outer bottom."""
         if frame.glass:
             lower = frame.glass[1]
-            lower_daylight = lower.height - 2 * RABBET_FACE
+            lower_daylight = lower.height - 2 * RABBET_FACE + 2 * GLASS_CLEARANCE
             meeting_bottom = frame.bottom_rail + lower_daylight
         else:
             remaining = (
@@ -522,9 +527,8 @@ def write_pdf(plan: CutPlan, path: Path) -> None:
     doc.text("Lumber cut plan", size=TITLE_SIZE, leading=22)
     doc.text(f'Kerf: {format_inches(plan.kerf)}"')
     doc.text(f"Placed: {len(plan.placements)} pieces")
-    doc.text(
-        f'Waste: {format_inches(plan.waste_area)} sq in ({plan.waste_percent:.1f}%)'
-    )
+    for line in summary_volume_lines(plan):
+        doc.text(line)
     for line in window_completion_lines(plan):
         doc.text(line)
     unused = unused_stock_line(plan)
@@ -540,7 +544,7 @@ def write_pdf(plan: CutPlan, path: Path) -> None:
         layout = plan.board_layouts.get(stock_id)
         doc.ensure(_section_height(stock, placements, plan.kerf, layout=layout))
         doc.text(
-            f'{stock_id} - {format_inches(stock.width)}" x 1" x {format_inches(stock.length)}"',
+            f"{stock_id} - {format_stock_dims(stock.width, stock.length)}",
             size=12,
             leading=16,
         )

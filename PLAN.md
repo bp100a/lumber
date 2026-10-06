@@ -268,7 +268,7 @@ Human-readable cut list (primary):
 LUMBER CUT PLAN
 Kerf: 1/8"
 
-Board: 7 3/8" x 1" x 144" (board-a)
+Board: 144" x 7 3/8" x 1" (board-a)
   Sequence: through cross-cut (shorten long rips)
   Cross-cut @ 0" + 62 1/4" -> blank A
     ...
@@ -277,10 +277,11 @@ Board: 7 3/8" x 1" x 144" (board-a)
     ...
 
 Placed: 35 pieces
-Waste: … sq in (~34% on used boards)
+Board feet used: …
+Waste: … bf (~34% on used boards)
 Windows completed: 7 of 7
 Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
-Unused stock: board-f, board-g, board-h
+Unused stock: board-f (97 1/2" × 4 3/4" × 1"), board-g (97" × 4 7/8" × 1"), board-h (97" × 5 1/2" × 1")
 ```
 
 When pieces do not fit (three-board fixture):
@@ -328,6 +329,8 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | PDF/text/markdown report how many windows are complete and which stock is unused | Done |
 | PDF per-window cut table: opening H×W plus part L×W×qty; each measurement one cell with `"` (`62 1/2"`, not `62` \| `1/2`) | Done |
 | PDF stock used list after window tables; assembled frames + two glass lites at the end (section 21) | Done |
+| PDF unused-stock line: leftover board face size in parentheses after each id (section 23) | Done |
+| Summary board feet used and waste in bf (2 decimals); stock dims largest-first then 1" (section 24) | Done |
 | 12' boards: through cross-cut so rips are not full length; small parts in the leftover (section 18) | Done |
 | 10' boards: one station + leftover (no 10' rip); unused leftover stock listed, not drawn | Done |
 | OR-Tools golden comparison | Deferred with Phase 2 |
@@ -360,6 +363,8 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | 20 | `layout.py`: shared `station_plan` / `BoardLayout` for packer, sequence, and diagrams | Done |
 | 21 | 1/8" glass class: fatter members on the larger opening (section 20); dining-side 40" opening | Done |
 | 22 | PDF stock used list, assembled frames, and glass sizes (section 21) | Done |
+| 23 | PDF unused-stock line: dimensions in parentheses after each leftover board id (section 23) | Done |
+| 24 | Stock dims largest-first, 1" last; summary board feet used and waste in bf (section 24) | Done |
 
 ---
 
@@ -369,7 +374,7 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 - Handwritten `cuts:` files still load (`storm_window.craftsmanblog.yaml`)
 - Outputs an explicit **board → rip → cross-cut** sequence (through-cut, cross-cut-first, or gang-rip when those rules apply)
 - Accounts for kerf on rips and cross-cuts
-- Reports waste percentage, **windows completed**, and **unused stock**
+- Reports **board feet used**, waste in **bf** (2 decimals) plus percent, **windows completed**, and **unused stock** (leftover boards with size in parentheses; largest face dim first, 1" last)
 - Places every piece that fits this workflow, and **lists what cannot be done** (14/15 on the three-board fixture)
 - Two-window subset of the old list still places all 10 pieces
 - Dining vs living 1/8" pairs share **rail length** (same glass width); living stiles are 1/16" fatter (section 20)
@@ -486,12 +491,13 @@ uv run lumber optimize examples/storm_window.yaml --format markdown -o storm_win
 
 Kerf: 1/8"
 Placed: 35 pieces
-Waste: …
+Board feet used: …
+Waste: … bf (~34%)
 Windows completed: 7 of 7
 Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
-Unused stock: board-f, board-g, board-h
+Unused stock: board-f (97 1/2" × 4 3/4" × 1"), board-g (97" × 4 7/8" × 1"), board-h (97" × 5 1/2" × 1")
 
-## board-a — 7 3/8" × 1" × 144"
+## board-a — 144" × 7 3/8" × 1"
 
 ![Cut diagram for board-a](storm_window-board-a.svg)
 
@@ -545,9 +551,9 @@ Each placed piece is a labeled rectangle at its `rip_offset` / `length_offset` w
 
 One file, e.g. `storm_window.pdf`, that contains:
 
-1. Title, kerf, placed count, waste, **windows completed** (when cuts have window ids), **unused stock**
+1. Title, kerf, placed count, **board feet used**, waste in **bf** (2 decimals), **windows completed** (when cuts have window ids), **unused stock** with leftover board size in parentheses (largest face dim first, 1" last; sections 23–24)
 2. **Cuts by window** (when openings were used): one table per window, two-up on the page
-3. **Stock used**: each board that received cuts, with `W × 1" × L` (YAML stock order). Handwritten jobs get this after the summary.
+3. **Stock used**: each board that received cuts, with largest face dimension first and **1" last** (YAML stock order). Handwritten jobs get this after the summary.
 4. For each used board: a **drawn face diagram** (same geometry as today’s SVG) and the rip / cross-cut list
 5. An **Unplaced** section with `INSUFFICIENT STOCK` when pieces do not fit
 6. **Assembled frames** (when openings were used): one face drawing per window plus the two glass lites (section 21)
@@ -570,10 +576,11 @@ uv run lumber optimize examples/storm_window.yaml --format pdf -o storm_window.p
 Lumber cut plan
 Kerf: 1/8"
 Placed: 35 pieces
-Waste: …
+Board feet used: …
+Waste: … bf (~34%)
 Windows completed: 7 of 7
 Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
-Unused stock: board-f, board-g, board-h
+Unused stock: board-f (97 1/2" × 4 3/4" × 1"), board-g (97" × 4 7/8" × 1"), board-h (97" × 5 1/2" × 1")
 
 Cuts by window
   dining-west          dining-middle
@@ -584,28 +591,28 @@ Cuts by window
   …
 
 Stock used
-  board-a  7 3/8" × 1" × 144"
-  board-b  7" × 1" × 144"
+  board-a  144" × 7 3/8" × 1"
+  board-b  144" × 7" × 1"
   …
 
-board-a — 7 3/8" × 1" × 144"
+board-a — 144" × 7 3/8" × 1"
 [ diagram ]
 Cuts
   Sequence: through cross-cut (shorten long rips)
     …
 
-board-d — 7 1/4" × 1" × 120"
+board-d — 120" × 7 1/4" × 1"
   Sequence: through cross-cut (shorten long rips)
   Leftover blank: 57 5/8" x 7 1/4"
   …
 
 Assembled frames
-  Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS
+  Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS, 1/16" per side
   dining-west          dining-middle
   [ face drawing ]     [ face drawing ]
   Outer 20 5/8" × 62 1/4"
-  Upper glass 16 7/8" × 28 5/8"
-  Lower glass 16 7/8" × 27 3/4"
+  Upper glass 16 3/4" × 28 1/2"
+  Lower glass 16 3/4" × 27 5/8"
 ```
 
 - One board per page when the diagram + cut list would overflow; otherwise pack multiple boards on a page if they fit
@@ -649,7 +656,7 @@ Do **not** shell out to a browser or require a system PDF printer.
 - Reuse `lumber.diagram.board_regions` for piece / kerf / waste rectangles; map inches to page points with a max diagram width (~7.5" on letter)
 - CLI: `--format pdf`; error if `-o` is missing
 - `uv add reportlab` (runtime dependency, not only dev)
-- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; after section 20 the live PDF contains `Windows completed: 7 of 7`, dining-side, unused stock, `Cuts by window`, dining-west, `16 3/8"` / `2 1/8"` / `2 3/16"`; after section 21 it also contains `Stock used`, board-a dimensions, `Assembled frames`, dining-west glass `16 7/8"` / `27 3/4"` / `28 5/8"`; handwritten-cut PDFs omit the window tables and assembled frames but list Stock used; `window_cut_tables` is file order (seven openings)
+- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; after section 20 the live PDF contains `Windows completed: 7 of 7`, dining-side, unused stock, `Cuts by window`, dining-west, `16 3/8"` / `2 1/8"` / `2 3/16"`; after section 21 it also contains `Stock used`, board-a dimensions, `Assembled frames`, dining-west glass `16 3/4"` / `27 5/8"` / `28 1/2"`; handwritten-cut PDFs omit the window tables and assembled frames but list Stock used; `window_cut_tables` is file order (seven openings)
 
 ### Out of scope for this item
 
@@ -846,7 +853,7 @@ Shop reports print:
 ```
 Windows completed: 7 of 7
 Complete: dining-east, dining-middle, dining-side, dining-west, living-east, living-middle, living-west
-Unused stock: board-f, board-g, board-h
+Unused stock: board-f (97 1/2" × 4 3/4" × 1"), board-g (97" × 4 7/8" × 1"), board-h (97" × 5 1/2" × 1")
 ```
 
 The **PDF** also prints **Cuts by window** (section 13) in file order (includes dining-side).
@@ -901,7 +908,7 @@ So 12' boards get paired stiles; leftover stiles become one-per-strip on 10' boa
 Used boards are drawn as before. Boards with no placements are **not** drawn; they are listed:
 
 ```
-Unused stock: board-f, board-g, board-h
+Unused stock: board-f (97 1/2" × 4 3/4" × 1"), board-g (97" × 4 7/8" × 1"), board-h (97" × 5 1/2" × 1")
 ```
 
 ### Tests
@@ -1061,13 +1068,13 @@ Meeting 32 3/4" is stored for glazing; it does not change lumber. Seven windows 
 
 ## 21. PDF stock used, assembled frames, and glass
 
-**Status:** implemented. PDF-only. Packing and YAML schema are unchanged. Rabbet is a fixed **1/4" wide × 3/8" deep** (face overlap × depth into the 1" thickness), not a YAML field. Glass is **1/8" double-strength**. The meeting rail has a rabbet on **both** faces so it holds the upper and lower lights. Only the **1/4" face** changes glass L×W; 3/8" depth is for glazing compound and is printed on the note.
+**Status:** implemented. PDF-only. Packing and YAML schema are unchanged. Rabbet is a fixed **1/4" wide × 3/8" deep** (face overlap × depth into the 1" thickness), not a YAML field. Glass is **1/8" double-strength**, undersize **1/16" per side** in the rabbet so it can expand. The meeting rail has a rabbet on **both** faces so it holds the upper and lower lights. Only the **1/4" face** (minus clearance) changes glass L×W; 3/8" depth is for glazing compound and is printed on the note.
 
 ### Report order
 
 1. Summary (unchanged)
 2. Cuts by window (windows jobs only)
-3. **Stock used** — each used board id and `W × 1" × L` in YAML stock order (`CutPlan.used_stock`). Handwritten jobs get this after the summary. Leftover boards stay on the unused-stock summary line, not in this list.
+3. **Stock used** — each used board id and size (largest face dim first, 1" last) in YAML stock order (`CutPlan.used_stock`). Handwritten jobs get this after the summary. Leftover boards stay on the unused-stock summary line, not in this list.
 4. Per-board diagrams and cut lists
 5. Unplaced / `INSUFFICIENT STOCK` when needed
 6. **Assembled frames** (windows jobs only) — one face drawing per opening, file order, with glass sizes
@@ -1077,18 +1084,18 @@ Meeting 32 3/4" is stored for glazing; it does not change lumber. Seven windows 
 Derive sizes from the opening plus the same per-window member widths already used for lumber (section 20). Reconstruct expansion as `opening.height − stile_length`. Do not change packing.
 
 - Outer frame: `(width − expansion) × (height − expansion)`
-- Glass **width** (both lights): `rail_length + 2 × 1/4"`
+- Glass **width** (both lights): `rail_length + 2 × 1/4" − 2 × 1/16"`
 - Expansion clearance is **1/8" below and 1/8" above** the frame (`expansion / 2`). `windows[].meeting` is sill to the **centerline** of the meeting rail.
 - Meeting center in the frame: `meeting − expansion/2`
 - Lower daylight: from the top of the bottom rail to the bottom of the meeting rail
 - Upper daylight: from the top of the meeting rail to the bottom of the top rail
-- Each glass **height**: daylight + `2 × 1/4"` (into the 1/4" face of the rail rabbets)
+- Each glass **height**: daylight + `2 × 1/4"` (into the 1/4" face of the rail rabbets) − `2 × 1/16"` (clearance)
 
-Worked check, dining-west (2 1/8" stiles, meeting 31 1/2"): outer 20 5/8" × 62 1/4"; glass width 16 7/8"; lower glass 27 3/4"; upper glass 28 5/8". Living-west keeps the same glass **width**; heights differ because meeting is 32". Dining vs living still share glass width (section 20). Meeting rail 1 1/4" minus two 1/4" face rabbets leaves 3/4" of wood.
+Worked check, dining-west (2 1/8" stiles, meeting 31 1/2"): outer 20 5/8" × 62 1/4"; glass width 16 3/4"; lower glass 27 5/8"; upper glass 28 1/2". Living-west keeps the same glass **width**; heights differ because meeting is 32". Dining vs living still share glass width (section 20). Meeting rail 1 1/4" minus two 1/4" face rabbets leaves 3/4" of wood.
 
 If `meeting` is missing, draw the frame and skip the glass list.
 
-Note on the frame page: `Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS`.
+Note on the frame page: `Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS, 1/16" per side`.
 
 ### What does not change
 
@@ -1100,9 +1107,75 @@ Note on the frame page: `Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS`.
 ### Tests
 
 - `used_stock_rows`: live a–e in file order, not f/g/h; craftsmanblog lists used boards
-- dining-west glass 16 7/8" × 28 5/8" upper / 27 3/4" lower; living-west same width, different heights
+- dining-west glass 16 3/4" × 28 1/2" upper / 27 5/8" lower; living-west same width, different heights
 - Live PDF contains `Stock used`, board-a `7 3/8"`, `Assembled frames`, dining-side, glass labels
+- PDF unused-stock line includes leftover board dimensions in parentheses (section 23)
 - Handwritten PDF has `Stock used` and omits `Assembled frames` / window tables
+
+---
+
+## 23. Unused stock dimensions on the PDF
+
+**Status:** implemented.
+
+The unused-stock summary currently lists leftover board **ids** only (`board-f, board-g, board-h`). The shop PDF must show **face dimensions** next to each leftover board so you do not have to look them up in the YAML.
+
+### Rule
+
+After each unused board id, print face size in parentheses: **largest face dimension first, then the other, then 1" thickness** (section 24). Quantity is omitted when it is 1.
+
+```
+Unused stock: board-f (97 1/2" × 4 3/4" × 1"), board-g (97" × 4 7/8" × 1"), board-h (97" × 5 1/2" × 1")
+```
+
+YAML stock order among leftover boards. Boards that received cuts stay off this line (they appear under **Stock used**).
+
+### Implementation notes
+
+- `unused_stock_line` in `lumber/report.py` (the PDF already prints that line). Format each leftover `StockPiece` with `format_stock_dims`.
+- Text and markdown can share the same line. JSON `unused_stock` stays a list of ids.
+- Tests: leftover labels include `97 1/2"` before `4 3/4"` and end with `× 1"`.
+
+### What does not change
+
+- Which boards are leftover
+- Packer, Stock used list, assembled frames
+- JSON unused_stock as ids
+
+---
+
+## 24. Stock dimension order and board-feet summary
+
+**Status:** implemented.
+
+### Stock size labels
+
+Whenever a **whole board** is named with dimensions (summary unused stock, Stock used, per-board heading), list the two face sizes **largest first**, then thickness. Thickness is always **1"** and is always last:
+
+```
+144" × 7 3/8" × 1"
+97 1/2" × 4 3/4" × 1"
+```
+
+Do not put 1" in the middle. Leftover **blanks** on a used board (shop sequence lines like `Leftover blank: 19 1/4" x 7 3/8"`) stay as cut geometry, not this stock label.
+
+### Summary (first page)
+
+After `Placed:`, print board feet of **used** stock (boards that received cuts) and waste in board feet, not square inches. One board foot is 144 in² of 1" stock (`used_stock_area / 144`, `waste_area / 144`). Two decimal places. Keep the waste **percent** of used-board area.
+
+```
+Placed: 35 pieces
+Board feet used: 12.34
+Waste: 4.21 bf (34.1%)
+```
+
+Text, markdown, and PDF summaries all use this. JSON may keep `waste_area` and add `used_board_feet` / `waste_board_feet`.
+
+### Tests
+
+- Unused board-f label is `97 1/2" × 4 3/4" × 1"`
+- Live PDF contains `Board feet used:` and `bf`; does not use `sq in` on the summary
+- Board feet values match `used_stock_area / 144` and `waste_area / 144` at two decimals
 
 ---
 
@@ -1117,10 +1190,10 @@ Note on the frame page: `Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS`.
 | Inches | `fractions.Fraction`; parse mixed numbers / decimals / quotes; format mixed numbers (default 16ths) with optional `"` |
 | Models | `StockPiece`, `CutPiece` (`window_id`, `instance_id`), `Placement` (`rip_offset`, `length_offset`), `Problem` / `CutPlan` (including `windows` and `board_layouts`), `WindowOpening`, `CutMode`, `StationPlan`, `BoardLayout` |
 | Loader | YAML or JSON; `kerf` default 1/8"; `windows` xor `cuts`; `parts.*.width`; expansion default 1/4" |
-| Windows | `stile_length` / `rail_length`; 2 stiles + 3 rails per opening; 1/8" class fattening (section 20); labels; `window_cut_tables` in file order; `frame_assemblies` glass from meeting + 1/4" face rabbet |
+| Windows | `stile_length` / `rail_length`; 2 stiles + 3 rails per opening; 1/8" class fattening (section 20); labels; `window_cut_tables` in file order; `frame_assemblies` glass from meeting + 1/4" face rabbet − 1/16" per side |
 | Packer | Length-class greedy (section 5); strip pack longest-first / tightest remnant; widest-strip / tightest-width assignment; station blanks (section 18); waste on **used** boards only |
 | Sequence | Four modes (section 7 BoardLayout); gang combined width = last rip offset + width − first rip offset |
-| Reports | Text / JSON / markdown+SVG / PDF; windows completed; unused stock; PDF-only per-window tables, stock used list, assembled frames + glass (section 21); mixed number + `"` in one cell |
+| Reports | Text / JSON / markdown+SVG / PDF; windows completed; unused stock with size in parentheses (largest face dim first, 1" last); summary board feet used and waste in bf (section 24); PDF-only per-window tables, stock used list, assembled frames + glass (section 21); mixed number + `"` in one cell |
 | CLI | `lumber optimize`; `--format`, `-o`, `--kerf`; suffix inference; PDF requires `-o`; exit 1 if unplaced |
 | Tests | The suite in `tests/` is the oracle. Live (after section 20): 35 pieces, 7 windows, dining/living rail lengths equal, dining-side 35 1/2", living stiles 2 3/16". Packing/unused-stock from the post-implement run. Fixture: 14/15, gang-rip board-b, cross-cut-first board-c |
 

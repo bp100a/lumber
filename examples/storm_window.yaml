@@ -21,14 +21,14 @@ stock:
     quantity: 1
   - id: board-c
     width: "8 3/8"
-    length: "120"      # 10'
+    length: "119 3/4"      # 10'
     quantity: 1
   - id: board-d
-    width: "7 1/4"
+    width: "7 1/8"
     length: "120"      # 10'
     quantity: 1
   - id: board-e
-    width: "6 1/8"
+    width: "5 1/4"
     length: "120"      # 10'
     quantity: 1
   - id: board-f
@@ -42,6 +42,10 @@ stock:
   - id: board-h
     width: "5 1/2"
     length: "97"       # 8' 1"
+    quantity: 1
+  - id: board-i
+    width: "6 1/8"
+    length: "84"   # 7'
     quantity: 1
 
 windows:

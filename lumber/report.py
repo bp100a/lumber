@@ -18,17 +18,39 @@ from lumber.sequence import board_instructions
 from lumber.windows import summarize_window_completion, window_completion_lines
 
 
+def format_stock_dims(width: Fraction, length: Fraction) -> str:
+    """Whole-board size: largest face dim first, then the other, then 1\" thick."""
+    first, second = (length, width) if length >= width else (width, length)
+    return f'{format_inches(first)}" × {format_inches(second)}" × 1"'
+
+
+def summary_volume_lines(plan: CutPlan) -> list[str]:
+    """Board feet used and waste (2 decimals); waste still includes percent."""
+    return [
+        f"Board feet used: {plan.used_board_feet:.2f}",
+        f"Waste: {plan.waste_board_feet:.2f} bf ({plan.waste_percent:.1f}%)",
+    ]
+
+
 def _unused_stock(plan: CutPlan) -> list[StockPiece]:
     used = {p.stock_id for p in plan.placements}
     return [s for s in plan.stock if s.id not in used]
 
 
+def _unused_stock_label(stock: StockPiece) -> str:
+    """Leftover board id plus face size, matching the Stock used units."""
+    label = f"{stock.id} ({format_stock_dims(stock.width, stock.length)})"
+    if stock.quantity != 1:
+        label += f" ×{stock.quantity}"
+    return label
+
+
 def unused_stock_line(plan: CutPlan) -> str | None:
-    """Summary line listing boards that received no cuts, or None."""
+    """Summary line listing leftover boards with size in parentheses, or None."""
     unused = _unused_stock(plan)
     if not unused:
         return None
-    names = ", ".join(s.id for s in unused)
+    names = ", ".join(_unused_stock_label(s) for s in unused)
     return f"Unused stock: {names}"
 
 
@@ -58,7 +80,7 @@ def format_text(plan: CutPlan) -> str:
 
     for stock_id in sorted(grouped):
         width, length = stock_by_id[stock_id]
-        lines.append(f"Board: {format_inches(width)}\" x 1\" x {format_inches(length)}\" ({stock_id})")
+        lines.append(f"Board: {format_stock_dims(width, length)} ({stock_id})")
         stock = next(s for s in plan.stock if s.id == stock_id)
         layout = plan.board_layouts.get(stock_id)
         for indent, step in board_instructions(
@@ -69,7 +91,7 @@ def format_text(plan: CutPlan) -> str:
         lines.append("")
 
     lines.append(f"Placed: {len(plan.placements)} pieces")
-    lines.append(f"Waste: {format_inches(plan.waste_area)} sq in ({plan.waste_percent:.1f}%)")
+    lines.extend(summary_volume_lines(plan))
     for line in window_completion_lines(plan):
         lines.append(line)
     unused = unused_stock_line(plan)
@@ -117,6 +139,8 @@ def format_json(plan: CutPlan) -> str:
         "placed": len(plan.placements),
         "waste_area": format_inches(plan.waste_area),
         "waste_percent": round(plan.waste_percent, 2),
+        "used_board_feet": round(plan.used_board_feet, 2),
+        "waste_board_feet": round(plan.waste_board_feet, 2),
     }
     summary = summarize_window_completion(plan)
     if summary is not None:
@@ -145,7 +169,7 @@ def format_markdown(plan: CutPlan, images: dict[str, str] | None = None) -> str:
         "",
         f'Kerf: {format_inches(plan.kerf)}"',
         f"Placed: {len(plan.placements)} pieces",
-        f'Waste: {format_inches(plan.waste_area)} sq in ({plan.waste_percent:.1f}%)',
+        *summary_volume_lines(plan),
     ]
     lines.extend(window_completion_lines(plan))
     unused = unused_stock_line(plan)
@@ -157,7 +181,7 @@ def format_markdown(plan: CutPlan, images: dict[str, str] | None = None) -> str:
         width, length = stock_by_id[stock_id]
         image = (images or {}).get(stock_id) or diagram_filename(stock_id)
         lines.append(
-            f'## {stock_id} — {format_inches(width)}" × 1" × {format_inches(length)}"'
+            f"## {stock_id} — {format_stock_dims(width, length)}"
         )
         lines.append("")
         lines.append(f"![Cut diagram for {stock_id}]({image})")

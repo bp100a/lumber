@@ -114,7 +114,7 @@ cuts:
    - **Cross-cut first** when every piece on the board is the same length
    - **Gang-rip** when adjacent strips are same-length only
    - Otherwise **rip first**, then cross-cut
-5. Report waste on **used boards only**, which windows are complete, and which stock was leftover. The PDF also lists used-board dimensions after the window tables, then assembled frames with the two glass lites.
+5. Report **board feet used** and waste in **bf** on used boards only, which windows are complete, and which stock was leftover. Stock sizes are largest face dimension first, then 1" thick. The PDF also lists used-board dimensions after the window tables, then assembled frames with the two glass lites.
 
 Packing rules, formulas, and rebuild notes are in [`PLAN.md`](PLAN.md).
 

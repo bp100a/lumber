@@ -315,7 +315,7 @@ class UsedStockRow:
 
 @dataclass(frozen=True)
 class GlassLite:
-    """One glass pane: upper or lower, sized for the 1/4" face rabbet."""
+    """One glass pane: upper or lower, rabbet face minus 1/16\" per side."""
     name: str
     width: Fraction
     height: Fraction
@@ -336,6 +336,12 @@ class FrameAssembly:
 
 RABBET_FACE = Fraction(1, 4)
 RABBET_DEPTH = Fraction(3, 8)
+GLASS_CLEARANCE = Fraction(1, 16)
+
+
+def _pane(span: Fraction) -> Fraction:
+    """Fill the 1/4\" rabbet face, then leave 1/16\" per side for expansion."""
+    return span + 2 * RABBET_FACE - 2 * GLASS_CLEARANCE
 
 
 def used_stock_rows(plan: CutPlan) -> list[UsedStockRow]:
@@ -367,7 +373,7 @@ def _glass_lites(
     """Upper and lower lights; empty when meeting height is missing."""
     if opening.meeting is None:
         return ()
-    glass_width = rail_len + 2 * RABBET_FACE
+    glass_width = _pane(rail_len)
     meeting_center = opening.meeting - expansion / 2
     meeting_bottom = meeting_center - meeting / 2
     meeting_top = meeting_center + meeting / 2
@@ -377,12 +383,12 @@ def _glass_lites(
         GlassLite(
             name="Upper",
             width=glass_width,
-            height=upper_daylight + 2 * RABBET_FACE,
+            height=_pane(upper_daylight),
         ),
         GlassLite(
             name="Lower",
             width=glass_width,
-            height=lower_daylight + 2 * RABBET_FACE,
+            height=_pane(lower_daylight),
         ),
     )
 

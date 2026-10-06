@@ -252,10 +252,10 @@ def test_frame_assemblies_dining_west_glass_and_living_west_width() -> None:
     upper, lower = dining.glass
     assert upper.name == "Upper"
     assert lower.name == "Lower"
-    assert upper.width == parse_inches("16 7/8")
-    assert lower.width == parse_inches("16 7/8")
-    assert upper.height == parse_inches("28 5/8")
-    assert lower.height == parse_inches("27 3/4")
+    assert upper.width == parse_inches("16 3/4")
+    assert lower.width == parse_inches("16 3/4")
+    assert upper.height == parse_inches("28 1/2")
+    assert lower.height == parse_inches("27 5/8")
 
     living = frames["living-west"]
     assert living.stile == parse_inches("2 3/16")

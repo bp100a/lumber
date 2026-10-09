@@ -11,6 +11,7 @@ from lumber.windows import (
     WindowOpening,
     cuts_from_windows,
     frame_assemblies,
+    glass_order,
     rail_length,
     stile_length,
     summarize_window_completion,
@@ -163,6 +164,7 @@ def test_window_cut_tables_group_live_openings() -> None:
     dining_west = tables[0]
     assert dining_west.height == parse_inches("62 1/2")
     assert dining_west.width == parse_inches("20 7/8")
+    assert dining_west.meeting == parse_inches("31 1/2")
     parts = {row.name: row for row in dining_west.parts}
     assert parts["Stiles"].length == parse_inches("62 1/4")
     assert parts["Stiles"].width == parse_inches("2 1/8")
@@ -180,10 +182,12 @@ def test_window_cut_tables_group_live_openings() -> None:
     dining_side = next(t for t in tables if t.window_id == "dining-side")
     side_parts = {row.name: row for row in dining_side.parts}
     assert dining_side.width == parse_inches("40")
+    assert dining_side.meeting == parse_inches("32 3/4")
     assert side_parts["Top Rail"].length == parse_inches("35 1/2")
     assert side_parts["Stiles"].width == parse_inches("2 1/8")
     living_west = next(t for t in tables if t.window_id == "living-west")
     west_parts = {row.name: row for row in living_west.parts}
+    assert living_west.meeting == parse_inches("32")
     assert west_parts["Top Rail"].length == parse_inches("16 3/8")
     assert west_parts["Stiles"].width == parse_inches("2 3/16")
 
@@ -249,6 +253,7 @@ def test_frame_assemblies_dining_west_glass_and_living_west_width() -> None:
     assert dining.outer_width == parse_inches("20 5/8")
     assert dining.outer_height == parse_inches("62 1/4")
     assert dining.stile == parse_inches("2 1/8")
+    assert dining.meeting == parse_inches("31 1/2")
     upper, lower = dining.glass
     assert upper.name == "Upper"
     assert lower.name == "Lower"
@@ -259,6 +264,7 @@ def test_frame_assemblies_dining_west_glass_and_living_west_width() -> None:
 
     living = frames["living-west"]
     assert living.stile == parse_inches("2 3/16")
+    assert living.meeting == parse_inches("32")
     assert living.glass[0].width == dining.glass[0].width
     assert living.glass[0].height != dining.glass[0].height
     assert living.glass[1].height != dining.glass[1].height
@@ -267,3 +273,17 @@ def test_frame_assemblies_dining_west_glass_and_living_west_width() -> None:
 def test_handwritten_cuts_have_no_frame_assemblies() -> None:
     plan = optimize(load_problem(CRAFTSMANBLOG))
     assert frame_assemblies(plan) == []
+    assert glass_order(plan) == []
+
+
+def test_glass_order_groups_shared_pane_sizes() -> None:
+    plan = optimize(load_problem(LIVE))
+    rows = glass_order(plan)
+    by_size = {(row.width, row.height): row.quantity for row in rows}
+    dining_upper = (parse_inches("16 3/4"), parse_inches("28 1/2"))
+    dining_lower = (parse_inches("16 3/4"), parse_inches("27 5/8"))
+    assert by_size[dining_upper] == 2
+    assert by_size[dining_lower] == 2
+    assert sum(row.quantity for row in rows) == 14
+    heights = [row.height for row in rows]
+    assert heights == sorted(heights, reverse=True)

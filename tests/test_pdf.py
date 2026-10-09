@@ -107,6 +107,10 @@ def test_write_pdf_reports_windows_completed_from_stock(tmp_path: Path) -> None:
     assert b"dining-side" in data
     assert b"Height" in data
     assert b"Width" in data
+    assert b"Meeting" in data
+    assert b'31 1/2"' in data
+    assert b'32"' in data
+    assert b'32 3/4"' in data
     assert b"Stiles" in data
     assert b"Meeting rail" in data
     assert b'62 1/2"' in data
@@ -127,6 +131,12 @@ def test_write_pdf_reports_windows_completed_from_stock(tmp_path: Path) -> None:
     assert b'27 5/8"' in data
     assert b"Rabbet" in data
     assert b"1/16" in data
+    assert b"Glass to order" in data
+    assert b"DS" in data
+    frames_idx = data.find(b"Assembled frames")
+    glass_idx = data.find(b"Glass to order")
+    assert frames_idx != -1
+    assert glass_idx > frames_idx
 
 
 def test_write_pdf_omits_window_tables_for_handwritten_cuts(tmp_path: Path) -> None:
@@ -137,4 +147,5 @@ def test_write_pdf_omits_window_tables_for_handwritten_cuts(tmp_path: Path) -> N
     assert b"Cuts by window" not in data
     assert b"Height" not in data
     assert b"Assembled frames" not in data
+    assert b"Glass to order" not in data
     assert b"Stock used" in data

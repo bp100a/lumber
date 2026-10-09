@@ -2,7 +2,7 @@
 
 Letter-size cutsheet: summary, per-window cut tables (when openings were
 used), used-stock dimensions, a face diagram of each used board, the rip /
-cross-cut list, and assembled frames with glass sizes.
+cross-cut list, assembled frames with glass sizes, and a glass-to-order list.
 """
 
 from __future__ import annotations
@@ -27,12 +27,14 @@ from lumber.sequence import board_instructions
 from lumber.windows import (
     FrameAssembly,
     GLASS_CLEARANCE,
+    GlassOrderRow,
     RABBET_DEPTH,
     RABBET_FACE,
     UsedStockRow,
     WindowCutRow,
     WindowCutTable,
     frame_assemblies,
+    glass_order,
     used_stock_rows,
     window_completion_lines,
     window_cut_tables,
@@ -279,12 +281,15 @@ class _Pdf:
     def _window_block_height(self, table: WindowCutTable) -> float:
         """Height of one window table including title gap and opening rows."""
         rows = len(table.parts)
-        if table.height is not None and table.width is not None:
-            rows += 2
-            spacer = 8
-        else:
-            spacer = 0
-        return TABLE_TITLE + TABLE_TITLE_GAP + TABLE_ROW * rows + spacer + 10
+        opening = 0
+        if table.height is not None:
+            opening += 1
+        if table.width is not None:
+            opening += 1
+        if table.meeting is not None:
+            opening += 1
+        spacer = 8 if opening else 0
+        return TABLE_TITLE + TABLE_TITLE_GAP + TABLE_ROW * (rows + opening) + spacer + 10
 
     def _draw_window_block(self, left: float, top: float, table: WindowCutTable) -> None:
         """Draw one window's heading, opening size, and part rows."""
@@ -293,11 +298,17 @@ class _Pdf:
         title_baseline = top - TABLE_TITLE
         self.canvas.drawString(left, title_baseline, table.window_id)
         y = title_baseline - TABLE_TITLE_GAP - TABLE_ROW
-        if table.height is not None and table.width is not None:
+        if table.height is not None:
             self._opening_row(left, y, "Height", table.height)
             y -= TABLE_ROW
+        if table.width is not None:
             self._opening_row(left, y, "Width", table.width)
-            y -= TABLE_ROW + 8
+            y -= TABLE_ROW
+        if table.meeting is not None:
+            self._opening_row(left, y, "Meeting", table.meeting)
+            y -= TABLE_ROW
+        if table.height is not None or table.width is not None or table.meeting is not None:
+            y -= 8
         for row in table.parts:
             self._part_row(left, y, row)
             y -= TABLE_ROW
@@ -353,7 +364,8 @@ class _Pdf:
     def _frame_block_height(self, frame: FrameAssembly, col_w: float) -> float:
         _w, diagram_h = self._frame_diagram_size(frame, col_w)
         glass_lines = len(frame.glass)
-        return TABLE_TITLE + diagram_h + FRAME_BOTTOM_DIM + 14 * (1 + glass_lines) + 16
+        captions = 1 + glass_lines + (1 if frame.meeting is not None else 0)
+        return TABLE_TITLE + diagram_h + FRAME_BOTTOM_DIM + 14 * captions + 16
 
     def _meeting_band(self, frame: FrameAssembly) -> tuple[Fraction, Fraction]:
         """Meeting-rail bottom and top, inches from the outer bottom."""
@@ -476,6 +488,9 @@ class _Pdf:
             f'Outer {_inch_label(frame.outer_width)} × {_inch_label(frame.outer_height)}',
         )
         y -= 12
+        if frame.meeting is not None:
+            self.canvas.drawString(left, y, f'Meeting {_inch_label(frame.meeting)}')
+            y -= 12
         for lite in frame.glass:
             self.canvas.drawString(
                 left,
@@ -511,6 +526,18 @@ class _Pdf:
             else:
                 index += 1
             self.y = top - height
+        self.gap(8)
+
+    def draw_glass_order(self, rows: list[GlassOrderRow]) -> None:
+        """Unique pane sizes and quantities for ordering cut glass."""
+        if not rows:
+            return
+        self.ensure(16 + LINE * (1 + len(rows)) + 8)
+        self.text('Glass to order (1/8" DS)', size=12, leading=16)
+        for row in rows:
+            self.text(
+                f"  {row.quantity}  {_inch_label(row.width)} × {_inch_label(row.height)}"
+            )
         self.gap(8)
 
     def save(self) -> None:
@@ -567,5 +594,6 @@ def write_pdf(plan: CutPlan, path: Path) -> None:
             )
 
     doc.draw_assembled_frames(frame_assemblies(plan))
+    doc.draw_glass_order(glass_order(plan))
 
     doc.save()

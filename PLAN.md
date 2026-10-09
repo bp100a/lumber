@@ -331,6 +331,8 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | PDF stock used list after window tables; assembled frames + two glass lites at the end (section 21) | Done |
 | PDF unused-stock line: leftover board face size in parentheses after each id (section 23) | Done |
 | Summary board feet used and waste in bf (2 decimals); stock dims largest-first then 1" (section 24) | Done |
+| PDF glass-to-order list of unique pane sizes and quantities after frame diagrams (section 25) | Done |
+| PDF window dimensions include meeting-rail position (sill to centerline) with Height and Width (section 26) | Done |
 | 12' boards: through cross-cut so rips are not full length; small parts in the leftover (section 18) | Done |
 | 10' boards: one station + leftover (no 10' rip); unused leftover stock listed, not drawn | Done |
 | OR-Tools golden comparison | Deferred with Phase 2 |
@@ -365,6 +367,8 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 | 22 | PDF stock used list, assembled frames, and glass sizes (section 21) | Done |
 | 23 | PDF unused-stock line: dimensions in parentheses after each leftover board id (section 23) | Done |
 | 24 | Stock dims largest-first, 1" last; summary board feet used and waste in bf (section 24) | Done |
+| 25 | PDF glass-to-order list: unique pane sizes and quantities after frame diagrams (section 25) | Done |
+| 26 | PDF window dimensions include meeting-rail position with Height and Width (section 26) | Done |
 
 ---
 
@@ -382,8 +386,9 @@ Markdown + sibling SVGs (section 12) exist as an optional format. The **shop-fac
 - Live packing of 35 pieces / 7 windows on boards a–e (board-c used; leftover f, g, h)
 - Can write a `.md` shop report that shows, for each used board, where every cut sits on the face
 - Can write a single **PDF** with those instructions and graphics, suitable to print or open without a Markdown preview
-- PDF lists each window’s opening and derived cuts (length, width, quantity) with mixed numbers and a `"` inch mark in a single cell per measurement
-- PDF lists used stock dimensions after the window tables, then assembled frames and two glass lites per opening (section 21)
+- PDF lists each window’s opening (height, width, meeting-rail position) and derived cuts (length, width, quantity) with mixed numbers and a `"` inch mark in a single cell per measurement
+- PDF lists used stock dimensions after the window tables, then assembled frames and two glass lites per opening (section 21), then a glass-to-order qty list (section 25)
+- PDF window tables and assembled frames include meeting-rail position with Height and Width (section 26)
 - When every piece on a board is the same length, shop instructions **cross-cut that length first**, then rip, so leftover is a full-width offcut
 - When adjacent strips hold only same-length parts, **rip them as one blank**, cross-cut, then rip apart, so leftover is a wider offcut
 - From opening height/width, compute stile and rail **lengths** (1/4" expansion; rails between stiles) and **widths** (section 20 glass class)
@@ -557,6 +562,7 @@ One file, e.g. `storm_window.pdf`, that contains:
 4. For each used board: a **drawn face diagram** (same geometry as today’s SVG) and the rip / cross-cut list
 5. An **Unplaced** section with `INSUFFICIENT STOCK` when pieces do not fit
 6. **Assembled frames** (when openings were used): one face drawing per window plus the two glass lites (section 21)
+7. **Glass to order** (when openings were used): unique pane sizes and quantities after the frame diagrams (section 25)
 
 Open in any PDF viewer, print, or take to the shop. No Markdown preview required.
 
@@ -586,6 +592,7 @@ Cuts by window
   dining-west          dining-middle
   Height  62 1/2"           Height  62 1/2"
   Width   20 7/8"           Width   41 7/8"
+  Meeting 31 1/2"           Meeting 31 1/2"
   Stiles  62 1/4"  2 1/8"  2
   Top Rail 16 3/8"  2 1/8"  1
   …
@@ -611,8 +618,14 @@ Assembled frames
   dining-west          dining-middle
   [ face drawing ]     [ face drawing ]
   Outer 20 5/8" × 62 1/4"
+  Meeting 31 1/2"
   Upper glass 16 3/4" × 28 1/2"
   Lower glass 16 3/4" × 27 5/8"
+
+Glass to order (1/8" DS)
+  2  16 3/4" × 28 1/2"
+  2  16 3/4" × 27 5/8"
+  …
 ```
 
 - One board per page when the diagram + cut list would overflow; otherwise pack multiple boards on a page if they fit
@@ -627,7 +640,7 @@ Each window is a small grid:
 
 | Column | Opening rows | Part rows |
 |--------|----------------|-----------|
-| 1 | Height / Width | Stiles, Top Rail, Meeting rail, Bottom rail |
+| 1 | Height / Width / Meeting | Stiles, Top Rail, Meeting rail, Bottom rail |
 | 2 | Opening size (`62 1/2"`) | Part **length** (`62 1/4"`) |
 | 3 | — | Part **width** (`2 1/8"`) |
 | 4 | — | **Quantity** |
@@ -638,7 +651,7 @@ Leave a gap between the window-id heading and the first grid row so descenders (
 
 Dining west (live **2 1/8"** stiles) is the worked example: opening 62 1/2 × 20 7/8; stiles 62 1/4 × 2 1/8 × 2; rails 16 3/8 (top 2 1/8, meeting 1 1/4, bottom 3 1/2). Those lengths come from section 16, not from packing. Formula tests still use 2 1/2" stiles → dining-west rails 15 5/8".
 
-Openings are stored on `Problem` / `CutPlan` so the table can print original height and width, not only the derived pieces.
+Openings are stored on `Problem` / `CutPlan` so the table can print original height, width, and meeting (sill to meeting-rail centerline), not only the derived pieces. Meeting is the YAML `windows[].meeting` value (section 26). Skip the Meeting row when that field is missing.
 
 ### Library
 
@@ -656,7 +669,7 @@ Do **not** shell out to a browser or require a system PDF printer.
 - Reuse `lumber.diagram.board_regions` for piece / kerf / waste rectangles; map inches to page points with a max diagram width (~7.5" on letter)
 - CLI: `--format pdf`; error if `-o` is missing
 - `uv add reportlab` (runtime dependency, not only dev)
-- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; after section 20 the live PDF contains `Windows completed: 7 of 7`, dining-side, unused stock, `Cuts by window`, dining-west, `16 3/8"` / `2 1/8"` / `2 3/16"`; after section 21 it also contains `Stock used`, board-a dimensions, `Assembled frames`, dining-west glass `16 3/4"` / `27 5/8"` / `28 1/2"`; handwritten-cut PDFs omit the window tables and assembled frames but list Stock used; `window_cut_tables` is file order (seven openings)
+- Tests: writing a PDF creates a file that starts with `%PDF`; the 3-window fixture PDF contains board ids and `INSUFFICIENT STOCK`; after section 20 the live PDF contains `Windows completed: 7 of 7`, dining-side, unused stock, `Cuts by window`, dining-west, `16 3/8"` / `2 1/8"` / `2 3/16"`; after section 21 it also contains `Stock used`, board-a dimensions, `Assembled frames`, dining-west glass `16 3/4"` / `27 5/8"` / `28 1/2"`; after section 26 the live PDF also contains `Meeting` and dining-west `31 1/2"`, living-west `32"`, dining-side `32 3/4"`; handwritten-cut PDFs omit the window tables and assembled frames but list Stock used; `window_cut_tables` is file order (seven openings)
 
 ### Out of scope for this item
 
@@ -1078,6 +1091,7 @@ Meeting 32 3/4" is stored for glazing; it does not change lumber. Seven windows 
 4. Per-board diagrams and cut lists
 5. Unplaced / `INSUFFICIENT STOCK` when needed
 6. **Assembled frames** (windows jobs only) — one face drawing per opening, file order, with glass sizes
+7. **Glass to order** — unique W × H and how many of each, after the frame diagrams (section 25)
 
 ### Glass and frame geometry
 
@@ -1108,9 +1122,11 @@ Note on the frame page: `Rabbet 1/4" wide × 3/8" deep; glass 1/8" DS, 1/16" per
 
 - `used_stock_rows`: live a–e in file order, not f/g/h; craftsmanblog lists used boards
 - dining-west glass 16 3/4" × 28 1/2" upper / 27 5/8" lower; living-west same width, different heights
-- Live PDF contains `Stock used`, board-a `7 3/8"`, `Assembled frames`, dining-side, glass labels
+- Live PDF window tables and assembled frames print Meeting (section 26)
+- Live PDF contains `Stock used`, board-a `7 3/8"`, `Assembled frames`, dining-side, glass labels, then **Glass to order**
+- Live PDF glass-to-order: dining-west upper size with qty ≥ 2 (west + east share)
+- Handwritten PDF has `Stock used` and omits `Assembled frames` / window tables / `Glass to order`
 - PDF unused-stock line includes leftover board dimensions in parentheses (section 23)
-- Handwritten PDF has `Stock used` and omits `Assembled frames` / window tables
 
 ---
 
@@ -1179,6 +1195,75 @@ Text, markdown, and PDF summaries all use this. JSON may keep `waste_area` and a
 
 ---
 
+## 25. Glass-to-order list
+
+**Status:** implemented. PDF-only. After **Assembled frames**, print a cut list for the glazier: how many of each unique pane size.
+
+### Rule
+
+Collect every lite from `frame_assemblies` (upper and lower). Group panes that share the same **width and height** (as labeled on the frames: installed width × height). Print quantity and size. Sort largest height first, then width. Heading notes `1/8" DS`.
+
+```
+Glass to order (1/8" DS)
+  2  16 3/4" × 28 1/2"
+  2  16 3/4" × 27 5/8"
+  …
+```
+
+Dining west and dining east share sizes, so those count as 2. Do not list window ids here — this is an order list, not a per-window recap. Handwritten `cuts:` jobs skip this block (no openings). Missing `meeting` skips those frames’ glass, same as the drawings.
+
+### Implementation notes
+
+- `lumber/windows.py`: `glass_order(plan)` → rows of width, height, quantity
+- `lumber/pdf.py`: draw after `draw_assembled_frames`
+- Tests: dining-west upper size appears with qty ≥ 2 on the live job; handwritten PDF omits `Glass to order`
+
+### What does not change
+
+- Glass formula (section 21)
+- Packer, YAML, text/JSON/markdown
+
+---
+
+## 26. Meeting rail on window dimensions
+
+**Status:** implemented. PDF-only. Each window’s opening block already prints Height and Width. Print **Meeting** as the third dimension: `windows[].meeting`, sill to the **centerline** of the meeting rail (sections 16 and 21). Same number as YAML. Does not change lumber lengths or glass math.
+
+### Cuts by window
+
+```
+Height   62 1/2"
+Width    20 7/8"
+Meeting  31 1/2"
+```
+
+Skip the Meeting row when `windows[].meeting` is missing. The part row **Meeting rail** stays the ripped piece (length × width × qty), not the opening position.
+
+Worked check: dining-west / dining-east / dining-middle `31 1/2"`; living-west / living-east / living-middle `32"`; dining-side `32 3/4"`.
+
+### Assembled frames
+
+After the Outer size line, print the same Meeting value so the drawing and the cut table agree. Skip when meeting is missing (same as skipping glass).
+
+```
+Outer 20 5/8" × 62 1/4"
+Meeting 31 1/2"
+Upper glass 16 3/4" × 28 1/2"
+```
+
+### Implementation notes
+
+- `WindowCutTable.meeting` and `FrameAssembly.meeting` from `opening.meeting`
+- `lumber/pdf.py`: third opening row; caption under each frame
+- Tests: table values above; live PDF contains `Meeting` plus `31 1/2"`, `32"`, `32 3/4"`; handwritten PDF still omits window tables
+
+### What does not change
+
+- YAML schema, packer, glass formula
+- Text / JSON / markdown reports
+
+---
+
 ## 19. Regenerating the codebase from this plan
 
 **Verdict:** this plan plus `examples/` and `tests/` is enough to rebuild a **behavior-equivalent** tool — same packing, same shop sequences, same CLI contracts, same report contents. It is **not** a line-for-line spec. A regenerate will not (and need not) match private helper names, PDF/SVG drawing constants, or docstring wording.
@@ -1190,10 +1275,10 @@ Text, markdown, and PDF summaries all use this. JSON may keep `waste_area` and a
 | Inches | `fractions.Fraction`; parse mixed numbers / decimals / quotes; format mixed numbers (default 16ths) with optional `"` |
 | Models | `StockPiece`, `CutPiece` (`window_id`, `instance_id`), `Placement` (`rip_offset`, `length_offset`), `Problem` / `CutPlan` (including `windows` and `board_layouts`), `WindowOpening`, `CutMode`, `StationPlan`, `BoardLayout` |
 | Loader | YAML or JSON; `kerf` default 1/8"; `windows` xor `cuts`; `parts.*.width`; expansion default 1/4" |
-| Windows | `stile_length` / `rail_length`; 2 stiles + 3 rails per opening; 1/8" class fattening (section 20); labels; `window_cut_tables` in file order; `frame_assemblies` glass from meeting + 1/4" face rabbet − 1/16" per side |
+| Windows | `stile_length` / `rail_length`; 2 stiles + 3 rails per opening; 1/8" class fattening (section 20); labels; `window_cut_tables` in file order with Height / Width / Meeting; `frame_assemblies` glass from meeting + 1/4" face rabbet − 1/16" per side; `glass_order` unique W×H + qty (section 25); meeting position on PDF tables and frames (section 26) |
 | Packer | Length-class greedy (section 5); strip pack longest-first / tightest remnant; widest-strip / tightest-width assignment; station blanks (section 18); waste on **used** boards only |
 | Sequence | Four modes (section 7 BoardLayout); gang combined width = last rip offset + width − first rip offset |
-| Reports | Text / JSON / markdown+SVG / PDF; windows completed; unused stock with size in parentheses (largest face dim first, 1" last); summary board feet used and waste in bf (section 24); PDF-only per-window tables, stock used list, assembled frames + glass (section 21); mixed number + `"` in one cell |
+| Reports | Text / JSON / markdown+SVG / PDF; windows completed; unused stock with size in parentheses (largest face dim first, 1" last); summary board feet used and waste in bf (section 24); PDF-only per-window tables (Height / Width / Meeting), stock used list, assembled frames + glass (section 21), glass-to-order qty list (section 25), meeting position on frames (section 26); mixed number + `"` in one cell |
 | CLI | `lumber optimize`; `--format`, `-o`, `--kerf`; suffix inference; PDF requires `-o`; exit 1 if unplaced |
 | Tests | The suite in `tests/` is the oracle. Live (after section 20): 35 pieces, 7 windows, dining/living rail lengths equal, dining-side 35 1/2", living stiles 2 3/16". Packing/unused-stock from the post-implement run. Fixture: 14/15, gang-rip board-b, cross-cut-first board-c |
 

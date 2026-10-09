@@ -301,6 +301,7 @@ class WindowCutTable:
     window_id: str
     height: Fraction | None
     width: Fraction | None
+    meeting: Fraction | None
     parts: tuple[WindowCutRow, ...]
 
 
@@ -331,6 +332,7 @@ class FrameAssembly:
     top_rail: Fraction
     meeting_rail: Fraction
     bottom_rail: Fraction
+    meeting: Fraction | None
     glass: tuple[GlassLite, ...]
 
 
@@ -427,6 +429,7 @@ def frame_assemblies(plan: CutPlan) -> list[FrameAssembly]:
                 top_rail=top.width,
                 meeting_rail=meeting.width,
                 bottom_rail=bottom.width,
+                meeting=opening.meeting,
                 glass=_glass_lites(
                     opening,
                     expansion,
@@ -439,6 +442,28 @@ def frame_assemblies(plan: CutPlan) -> list[FrameAssembly]:
             )
         )
     return assemblies
+
+
+@dataclass(frozen=True)
+class GlassOrderRow:
+    """One unique pane size on the glass-to-order list."""
+    width: Fraction
+    height: Fraction
+    quantity: int
+
+
+def glass_order(plan: CutPlan) -> list[GlassOrderRow]:
+    """Unique glass sizes and how many of each, largest height first."""
+    counts: dict[tuple[Fraction, Fraction], int] = defaultdict(int)
+    for frame in frame_assemblies(plan):
+        for lite in frame.glass:
+            counts[(lite.width, lite.height)] += 1
+    rows = [
+        GlassOrderRow(width=width, height=height, quantity=qty)
+        for (width, height), qty in counts.items()
+    ]
+    rows.sort(key=lambda row: (-row.height, -row.width))
+    return rows
 
 
 _PART_RANK = {label: index for index, label in enumerate(_PART_LABELS.values())}
@@ -485,6 +510,7 @@ def window_cut_tables(plan: CutPlan) -> list[WindowCutTable]:
                 window_id=window_id,
                 height=opening.height if opening else None,
                 width=opening.width if opening else None,
+                meeting=opening.meeting if opening else None,
                 parts=tuple(rows),
             )
         )
